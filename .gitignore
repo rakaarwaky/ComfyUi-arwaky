@@ -1,0 +1,7 @@
+venv/
+*.log
+*.whl
+.idea/
+.vscode/
+__pycache__/
+ComfyUI_temp/
