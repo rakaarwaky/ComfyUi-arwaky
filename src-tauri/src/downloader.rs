@@ -53,6 +53,8 @@ fn validate_symlink_target(target: &Path, base_dir: &Path) -> Result<(), String>
 
 const BACKEND_VERSION: &str = "1.1.0";
 const BACKEND_ARCHIVE_NAME: &str = "comfyui-backend-linux-x86_64.tar.gz";
+pub(crate) const BACKEND_SHA256: &str =
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct DownloadProgress {
@@ -289,7 +291,7 @@ impl BackendInstaller {
         let mut reader = BufReader::new(file);
         let mut hasher = Sha256::new();
 
-        let mut buf = [0u8; 256 * 1024];
+        let mut buf = vec![0u8; 256 * 1024];
         loop {
             let n = reader
                 .read(&mut buf)

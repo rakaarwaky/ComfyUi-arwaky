@@ -81,11 +81,15 @@ run_step "cargo test" "cargo test --manifest-path src-tauri/Cargo.toml"
 if $FAST || $SKIP_SHELLCHECK; then
   skip "shellcheck (skipped)"
 else
-  SCRIPT_FILES=$(find scripts/ -name '*.sh' -type f 2>/dev/null | tr '\n' ' ' || true)
-  if [ -n "$SCRIPT_FILES" ]; then
-    run_step "shellcheck" "shellcheck $SCRIPT_FILES"
+  if command -v shellcheck &>/dev/null; then
+    SCRIPT_FILES=$(find scripts/ -name '*.sh' -type f 2>/dev/null | tr '\n' ' ' || true)
+    if [ -n "$SCRIPT_FILES" ]; then
+      run_step "shellcheck" "shellcheck $SCRIPT_FILES"
+    else
+      skip "shellcheck (no .sh files found)"
+    fi
   else
-    skip "shellcheck (no .sh files found)"
+    skip "shellcheck (not installed, run: sudo dnf install -y shellcheck)"
   fi
 fi
 

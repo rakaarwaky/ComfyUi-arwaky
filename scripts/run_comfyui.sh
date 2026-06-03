@@ -20,6 +20,7 @@ export HIP_VISIBLE_DEVICES="$DETECTED_GPU"
 export HSA_OVERRIDE_GFX_VERSION="10.3.0"
 
 # Activate virtual environment
+# shellcheck source=/dev/null
 source "$ROOT_DIR/venv/bin/activate"
 
 # Run ComfyUI with external model configuration
@@ -28,4 +29,5 @@ python "$ROOT_DIR/ComfyUI/main.py" \
   --extra-model-paths-config "$ROOT_DIR/extra_model_paths.yaml" \
   --output-directory "$HOME/SharedData/Output" \
   --input-directory "$HOME/SharedData/Input" \
+  --user-directory "$HOME/SharedData/User" \
   "$@"

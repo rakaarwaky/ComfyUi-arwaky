@@ -28,12 +28,6 @@ echo "[2/3] Copying build artifacts to dist/..."
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
-# Copy AppImage (portable, run directly)
-if ls "$BUNDLE_DIR/appimage/"*.AppImage 2>/dev/null; then
-    cp "$BUNDLE_DIR/appimage/"*.AppImage "$DIST_DIR/"
-    echo "  ✅ AppImage copied to dist/"
-fi
-
 # Copy RPM (Fedora installer)
 if ls "$BUNDLE_DIR/rpm/"*.rpm 2>/dev/null; then
     cp "$BUNDLE_DIR/rpm/"*.rpm "$DIST_DIR/"
@@ -51,7 +45,7 @@ fi
 echo ""
 echo "  Generating SHA256 checksums..."
 cd "$DIST_DIR"
-for file in *.AppImage *.rpm comfyui-desktop; do
+for file in *.rpm comfyui-desktop; do
     if [ -f "$file" ]; then
         sha256sum "$file" >> SHA256SUMS.txt
         echo "    ✅ $file checksum generated"

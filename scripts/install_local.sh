@@ -6,7 +6,7 @@
 set -e
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RPM_FILE="$ROOT_DIR/dist/comfyui-desktop-0.1.0-1.x86_64.rpm"
+RPM_FILE=$(ls -t "$ROOT_DIR/dist"/comfyui-desktop-*.rpm 2>/dev/null | head -n 1)
 LOCAL_DIR="$HOME/.local"
 TEMP_EXTRACT_DIR="/tmp/comfyui_desktop_rpm_extract"
 
@@ -16,8 +16,8 @@ echo "========================================"
 echo ""
 
 # Ensure RPM file exists
-if [ ! -f "$RPM_FILE" ]; then
-    echo "❌ Error: RPM file not found at: $RPM_FILE"
+if [ -z "$RPM_FILE" ] || [ ! -f "$RPM_FILE" ]; then
+    echo "❌ Error: RPM file not found in: $ROOT_DIR/dist/"
     echo "Please run the build script first:"
     echo "  bash scripts/build.sh"
     exit 1
@@ -33,14 +33,19 @@ rpm2cpio "$RPM_FILE" | cpio -idmv > /dev/null 2>&1
 
 echo "[3/4] Installing to $LOCAL_DIR..."
 
-# 1. Install binary and rename from 'app' to 'comfyui-desktop'
+# 1. Install binary
 mkdir -p "$LOCAL_DIR/bin"
-if [ -f "./usr/bin/app" ]; then
+rm -f "$LOCAL_DIR/bin/comfyui-desktop"
+if [ -f "./usr/bin/comfyui-desktop" ]; then
+    cp "./usr/bin/comfyui-desktop" "$LOCAL_DIR/bin/comfyui-desktop"
+    chmod +x "$LOCAL_DIR/bin/comfyui-desktop"
+    echo "  ✅ Binary installed to: $LOCAL_DIR/bin/comfyui-desktop"
+elif [ -f "./usr/bin/app" ]; then
     cp "./usr/bin/app" "$LOCAL_DIR/bin/comfyui-desktop"
     chmod +x "$LOCAL_DIR/bin/comfyui-desktop"
     echo "  ✅ Binary installed to: $LOCAL_DIR/bin/comfyui-desktop"
 else
-    echo "❌ Error: Binary not found inside RPM"
+    echo "❌ Error: Binary not found inside RPM (searched for comfyui-desktop and app)"
     exit 1
 fi
 
@@ -56,8 +61,8 @@ while IFS= read -r -d '' SRC_ICON; do
     mkdir -p "$DEST_ICON_DIR"
     cp "$SRC_ICON" "$DEST_ICON_DIR/comfyui-desktop.png"
     echo "    ✅ Icon $SIZE installed"
-    ((ICON_COUNT++))
-done < <(find ./usr/share/icons/hicolor -name "app.png" -type f -print0 2>/dev/null)
+    ICON_COUNT=$((ICON_COUNT + 1))
+done < <(find ./usr/share/icons/hicolor \( -name "comfyui-desktop.png" -o -name "app.png" -o -name "icon.png" \) -type f -print0 2>/dev/null)
 if [ $ICON_COUNT -eq 0 ]; then
     echo "    ⚠️  No icons found in RPM (this may be normal if icons aren't bundled)"
 fi

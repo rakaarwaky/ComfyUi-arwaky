@@ -20,6 +20,7 @@ on:
 env:
   BACKEND_VERSION: ${{ github.event.inputs.backend_version }}
   PYTHON_VERSION: ${{ github.event.inputs.python_version }}
+  ARCHIVE: comfyui-backend-linux-x86_64.tar.gz
 
 jobs:
   build-backend:
@@ -98,9 +99,7 @@ jobs:
 
       - name: Create compressed archive
         run: |
-          ARCHIVE="comfyui-backend-linux-x86_64.tar.gz"
           tar czf "$ARCHIVE" -C backend-staging .
-          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
           ls -lh "$ARCHIVE"
 
       - name: Calculate checksums
