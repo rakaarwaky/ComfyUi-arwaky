@@ -50,6 +50,9 @@
       "assets/icons/128x128@2x.png",
       "assets/icons/icon.icns",
       "assets/icons/icon.ico"
+    ],
+    "resources": [
+      "config.yaml.default"
     ]
   }
 }

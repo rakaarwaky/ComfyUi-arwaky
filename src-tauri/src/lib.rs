@@ -19,6 +19,22 @@ struct AppConfig {
     extra_model_paths: Option<String>,
 }
 
+fn ensure_user_config(app_handle: &tauri::AppHandle) {
+    if let Ok(config_dir) = app_handle.path().app_config_dir() {
+        std::fs::create_dir_all(&config_dir).ok();
+        let user_config = config_dir.join("config.yaml");
+        if !user_config.exists() {
+            let bundle = std::path::Path::new("../config.yaml.default");
+            let resource = app_handle.path().resource_dir().ok().map(|d| d.join("config.yaml.default"));
+            let src = if bundle.exists() { bundle.to_path_buf() }
+                     else { resource.unwrap_or_default() };
+            if src.exists() {
+                std::fs::copy(&src, &user_config).ok();
+            }
+        }
+    }
+}
+
 fn read_app_config(app_handle: &tauri::AppHandle) -> AppConfig {
     let check_path = |path: &std::path::Path| -> Option<AppConfig> {
         if path.exists() {
@@ -781,6 +797,8 @@ pub fn run() {
             }
 
             let app_handle = app.handle().clone();
+
+            ensure_user_config(&app_handle);
 
             // Writer thread: receives MPSC messages, formats, stores, and emits batched to frontend
             let app_handle_writer = app_handle.clone();
