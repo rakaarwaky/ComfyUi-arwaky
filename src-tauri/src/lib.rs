@@ -10,7 +10,7 @@ use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{Manager, Emitter};
+use tauri::{Emitter, Manager};
 
 #[derive(serde::Deserialize, Default, Clone, Debug)]
 struct AppConfig {
@@ -25,9 +25,16 @@ fn ensure_user_config(app_handle: &tauri::AppHandle) {
         let user_config = config_dir.join("config.yaml");
         if !user_config.exists() {
             let bundle = std::path::Path::new("../config.yaml.default");
-            let resource = app_handle.path().resource_dir().ok().map(|d| d.join("config.yaml.default"));
-            let src = if bundle.exists() { bundle.to_path_buf() }
-                     else { resource.unwrap_or_default() };
+            let resource = app_handle
+                .path()
+                .resource_dir()
+                .ok()
+                .map(|d| d.join("config.yaml.default"));
+            let src = if bundle.exists() {
+                bundle.to_path_buf()
+            } else {
+                resource.unwrap_or_default()
+            };
             if src.exists() {
                 std::fs::copy(&src, &user_config).ok();
             }
@@ -179,25 +186,27 @@ fn get_log_stats(stats: tauri::State<'_, LogStats>) -> (u64, u64) {
 
 #[tauri::command]
 fn check_backend_status(
-  app_handle: tauri::AppHandle,
-  backend: tauri::State<'_, BackendState>,
+    app_handle: tauri::AppHandle,
+    backend: tauri::State<'_, BackendState>,
 ) -> (bool, Option<String>) {
-  let user_config = read_app_config(&app_handle);
-  
-  if let (Some(ref py_path), Some(ref comfy_path)) = (&user_config.python_path, &user_config.comfyui_dir) {
-    if std::path::Path::new(py_path).exists() && std::path::Path::new(comfy_path).exists() {
-      return (true, Some("custom".to_string()));
-    }
-  }
+    let user_config = read_app_config(&app_handle);
 
-  let installer = downloader::BackendInstaller::new(
-    backend.install_dir.clone(),
-    downloader::backend_download_url(),
-    None,
-  );
-  let is_installed = installer.is_installed();
-  let version = installer.installed_version();
-  (is_installed, version)
+    if let (Some(ref py_path), Some(ref comfy_path)) =
+        (&user_config.python_path, &user_config.comfyui_dir)
+    {
+        if std::path::Path::new(py_path).exists() && std::path::Path::new(comfy_path).exists() {
+            return (true, Some("custom".to_string()));
+        }
+    }
+
+    let installer = downloader::BackendInstaller::new(
+        backend.install_dir.clone(),
+        downloader::backend_download_url(),
+        None,
+    );
+    let is_installed = installer.is_installed();
+    let version = installer.installed_version();
+    (is_installed, version)
 }
 
 #[tauri::command]
@@ -419,77 +428,77 @@ fn parse_hsa_override(gfx: &str) -> Option<&'static str> {
 }
 
 fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
-  let user_config = read_app_config(app_handle);
-  let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let user_config = read_app_config(app_handle);
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
 
-  let python_path = if let Some(ref path) = user_config.python_path {
-    std::path::PathBuf::from(path)
-  } else {
-    let mut p = current_dir.join("venv").join("bin").join("python");
-    if !p.exists() {
-      if let Ok(res_dir) = app_handle.path().resource_dir() {
-        let test_path = res_dir.join("venv").join("bin").join("python");
-        if test_path.exists() {
-          p = test_path;
+    let python_path = if let Some(ref path) = user_config.python_path {
+        std::path::PathBuf::from(path)
+    } else {
+        let mut p = current_dir.join("venv").join("bin").join("python");
+        if !p.exists() {
+            if let Ok(res_dir) = app_handle.path().resource_dir() {
+                let test_path = res_dir.join("venv").join("bin").join("python");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    if !p.exists() {
-      if let Some(install_dir) = downloader::default_install_dir() {
-        let test_path = install_dir.join("venv/bin/python");
-        if test_path.exists() {
-          p = test_path;
+        if !p.exists() {
+            if let Some(install_dir) = downloader::default_install_dir() {
+                let test_path = install_dir.join("venv/bin/python");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    p
-  };
+        p
+    };
 
-  let comfyui_dir = if let Some(ref path) = user_config.comfyui_dir {
-    std::path::PathBuf::from(path)
-  } else {
-    let mut p = current_dir.join("ComfyUI");
-    if !p.exists() {
-      if let Ok(res_dir) = app_handle.path().resource_dir() {
-        let test_path = res_dir.join("ComfyUI");
-        if test_path.exists() {
-          p = test_path;
+    let comfyui_dir = if let Some(ref path) = user_config.comfyui_dir {
+        std::path::PathBuf::from(path)
+    } else {
+        let mut p = current_dir.join("ComfyUI");
+        if !p.exists() {
+            if let Ok(res_dir) = app_handle.path().resource_dir() {
+                let test_path = res_dir.join("ComfyUI");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    if !p.exists() {
-      if let Some(install_dir) = downloader::default_install_dir() {
-        let test_path = install_dir.join("ComfyUI");
-        if test_path.exists() {
-          p = test_path;
+        if !p.exists() {
+            if let Some(install_dir) = downloader::default_install_dir() {
+                let test_path = install_dir.join("ComfyUI");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    p
-  };
+        p
+    };
 
-  let extra_model_paths = if let Some(ref path) = user_config.extra_model_paths {
-    std::path::PathBuf::from(path)
-  } else {
-    let mut p = current_dir.join("extra_model_paths.yaml");
-    if !p.exists() {
-      if let Ok(res_dir) = app_handle.path().resource_dir() {
-        let test_path = res_dir.join("extra_model_paths.yaml");
-        if test_path.exists() {
-          p = test_path;
+    let extra_model_paths = if let Some(ref path) = user_config.extra_model_paths {
+        std::path::PathBuf::from(path)
+    } else {
+        let mut p = current_dir.join("extra_model_paths.yaml");
+        if !p.exists() {
+            if let Ok(res_dir) = app_handle.path().resource_dir() {
+                let test_path = res_dir.join("extra_model_paths.yaml");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    if !p.exists() {
-      if let Some(install_dir) = downloader::default_install_dir() {
-        let test_path = install_dir.join("extra_model_paths.yaml");
-        if test_path.exists() {
-          p = test_path;
+        if !p.exists() {
+            if let Some(install_dir) = downloader::default_install_dir() {
+                let test_path = install_dir.join("extra_model_paths.yaml");
+                if test_path.exists() {
+                    p = test_path;
+                }
+            }
         }
-      }
-    }
-    p
-  };
+        p
+    };
 
     log_info(app_handle, &format!("Python Path: {:?}", python_path));
     log_info(app_handle, &format!("Working Directory: {:?}", comfyui_dir));
@@ -880,7 +889,9 @@ pub fn run() {
             log_info(&app_handle, "Starting ComfyUI Desktop Launcher...");
 
             let user_config = read_app_config(&app_handle);
-            let is_custom = if let (Some(ref py_path), Some(ref comfy_path)) = (&user_config.python_path, &user_config.comfyui_dir) {
+            let is_custom = if let (Some(ref py_path), Some(ref comfy_path)) =
+                (&user_config.python_path, &user_config.comfyui_dir)
+            {
                 std::path::Path::new(py_path).exists() && std::path::Path::new(comfy_path).exists()
             } else {
                 false
