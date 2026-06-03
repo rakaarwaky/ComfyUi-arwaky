@@ -1,0 +1,61 @@
+# ==============================================================================
+# Rust Build & Dependency Requirements
+# Location: src-tauri/requirements.txt
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. System Dependencies (Required for compiling the Tauri Rust app)
+# ------------------------------------------------------------------------------
+
+# Debian / Ubuntu (24.04+)
+# Install command:
+#   sudo apt-get update && sudo apt-get install -y <package_list>
+# Packages:
+#   - libwebkit2gtk-4.1-dev
+#   - libgtk-3-dev
+#   - libayatana-appindicator3-dev
+#   - librsvg2-dev
+#   - patchelf
+#   - build-essential
+#   - libxdo-dev
+#   - libssl-dev
+
+# Fedora (40+)
+# Install command:
+#   sudo dnf install -y <package_list>
+# Packages:
+#   - webkit2gtk4.1-devel
+#   - gtk3-devel
+#   - libappindicator-gtk3-devel
+#   - librsvg2-devel
+#   - patchelf
+#   - openssl-devel
+#   - gcc
+#   - gcc-c++
+#   - make
+#   - pkgconf-pkg-config
+#   - rpm-build
+
+# ------------------------------------------------------------------------------
+# 2. Rust Crate Dependencies (Managed in Cargo.toml)
+# ------------------------------------------------------------------------------
+
+# Package info:
+#   edition = 2021
+#   rust-version = 1.77.2
+
+# Build Dependencies:
+tauri-build = "2.6.2"
+
+# Runtime Dependencies:
+tauri = "2.11.2"
+tauri-plugin-log = "2"
+serde = "1.0" (features = ["derive"])
+serde_json = "1.0"
+libc = "0.2"
+ureq = "3" (features = ["json"])
+flate2 = "1"
+tar = "0.4"
+sha2 = "0.11"
+hex = "0.4"
+log = "0.4"

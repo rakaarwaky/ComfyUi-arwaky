@@ -19,7 +19,7 @@ jobs:
     name: Lint & Unit Tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install system deps (for Tauri)
         run: |
@@ -136,7 +136,7 @@ jobs:
           node --version
           npm --version
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -152,25 +152,14 @@ jobs:
           restore-keys: |
             ${{ matrix.distro }}-cargo-
 
-      - name: Install frontend dependencies
-        run: npm install
-
-      - name: Build frontend with Vite
-        run: npm run build
-
-      - name: Verify Vite output
-        run: |
-          if [ ! -f frontend/dist/index.html ]; then
-            echo "frontend/dist/index.html not found"
-            exit 1
-          fi
-          echo "Frontend built successfully"
-          ls -lh frontend/dist/
+      - name: Install Tauri CLI
+        run: npm install --global @tauri-apps/cli@latest
 
       - name: Build Tauri app
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          npm run tauri build
+          cd src-tauri
+          tauri build
         env:
           CARGO_HOME: ${{ github.workspace }}/.cargo
           RUSTUP_HOME: ${{ github.workspace }}/.rustup
@@ -187,7 +176,7 @@ jobs:
 
       - name: Upload AppImage (${{ matrix.distro }})
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appimage-${{ matrix.distro }}
           path: src-tauri/target/release/bundle/appimage/*.AppImage
@@ -196,7 +185,7 @@ jobs:
 
       - name: Upload RPM (${{ matrix.distro }})
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpm-${{ matrix.distro }}
           path: src-tauri/target/release/bundle/rpm/*.rpm
@@ -205,7 +194,7 @@ jobs:
 
       - name: Upload DEB (${{ matrix.distro }})
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deb-${{ matrix.distro }}
           path: src-tauri/target/release/bundle/deb/*.deb

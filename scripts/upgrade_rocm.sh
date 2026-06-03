@@ -63,7 +63,6 @@ echo "✅ ROCm $ROCM_VERSION terinstall."
 echo ""
 echo "[5/5] Mengkonfigurasi environment variables..."
 
-ROCM_PATH="/opt/rocm"
 BASHRC="$HOME/.bashrc"
 
 # Tambahkan hanya jika belum ada

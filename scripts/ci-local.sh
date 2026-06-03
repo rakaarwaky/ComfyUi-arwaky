@@ -49,6 +49,7 @@ run_step() {
   shift
   echo ""
   echo "=== $name ==="
+  # shellcheck disable=SC2294
   if eval "$@"; then
     pass "$name"
   else

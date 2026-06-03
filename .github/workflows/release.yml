@@ -34,7 +34,6 @@ jobs:
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
-            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             build-essential \
@@ -119,46 +118,61 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           ls -lh
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git tag --sort=-version:refname | grep '^v' | sed -n '2p' || true)
+          if [ -n "$PREV_TAG" ]; then
+            {
+              echo "### Changelog"
+              echo ""
+              git log --oneline --no-decorate "${PREV_TAG}..${TAG}" 2>/dev/null | \
+                sed 's/^/- /' || echo "(no changes since previous tag)"
+            } > changelog.md
+          else
+            echo "(initial release)" > changelog.md
+          fi
+          cat changelog.md
+
       - name: Generate release notes
         id: release_notes
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          cat > release-notes.md << EOF
-          ## ComfyUI Desktop \${TAG}
-
-          ### Downloads
-
-          | Format | File |
-          |--------|------|
-          | AppImage (Portable) | \`*.AppImage\` |
-          | RPM (Fedora/RHEL) | \`*.rpm\` |
-          | DEB (Debian/Ubuntu) | \`*.deb\` |
-
-          ### Quick Start
-
-          **AppImage:**
-          \`\`\`bash
-          chmod +x ComfyUI-Desktop-*.AppImage
-          ./ComfyUI-Desktop-*.AppImage
-          \`\`\`
-
-          **RPM:**
-          \`\`\`bash
-          sudo rpm -i comfyui-desktop-*.rpm
-          comfyui-desktop
-          \`\`\`
-
-          ### Requirements
-          - AMD GPU (RX 6000/7000 series)
-          - ROCm 7.2.4+ installed system-wide
-          - 20GB+ free disk space (for backend download on first run)
-          - Linux (Fedora 40+, Ubuntu 24.04+, or compatible)
-
-          ### Verification
-          \`\`\`bash
-          sha256sum -c SHA256SUMS.txt
-          \`\`\`
-          EOF
+          {
+            echo "## ComfyUI Desktop ${TAG}"
+            echo ""
+            echo "### Downloads"
+            echo ""
+            echo "| Format | File |"
+            echo "|--------|------|"
+            echo "| AppImage (Portable) | \`*.AppImage\` |"
+            echo "| RPM (Fedora/RHEL) | \`*.rpm\` |"
+            echo "| DEB (Debian/Ubuntu) | \`*.deb\` |"
+            echo ""
+            echo "### Quick Start"
+            echo ""
+            echo "**AppImage:**"
+            printf '```bash\nchmod +x ComfyUI-Desktop-*.AppImage\n./ComfyUI-Desktop-*.AppImage\n```\n'
+            echo ""
+            echo "**RPM:**"
+            printf '```bash\nsudo rpm -i comfyui-desktop-*.rpm\ncomfyui-desktop\n```\n'
+            echo ""
+            echo "**DEB:**"
+            printf '```bash\nsudo dpkg -i comfyui-desktop-*.deb\ncomfyui-desktop\n```\n'
+            echo ""
+            echo "### Requirements"
+            echo "- AMD GPU (RX 6000/7000 series, Radeon PRO W6000/7000)"
+            echo "- ROCm 7.2.4+ installed system-wide"
+            echo "- 20GB+ free disk space (for backend download on first run)"
+            echo "- Linux (Fedora 40+, Ubuntu 24.04+, or compatible)"
+            echo ""
+            cat changelog.md
+            echo ""
+            echo "### Verification"
+            printf '```bash\nsha256sum -c SHA256SUMS.txt\n```\n'
+          } > release-notes.md
+          cat release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

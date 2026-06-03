@@ -1,19 +1,23 @@
+use flate2::read::GzDecoder;
+use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::{Read, Write, BufReader, BufWriter};
-use std::path::{Path, PathBuf, Component};
+use std::io::{BufReader, BufWriter, Read, Write};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use flate2::read::GzDecoder;
-use sha2::{Sha256, Digest};
 use tar::Archive;
 
 pub(crate) fn normalize_path(path: &Path) -> PathBuf {
     let mut result = PathBuf::new();
     for component in path.components() {
         match component {
-            Component::ParentDir => { result.pop(); }
+            Component::ParentDir => {
+                result.pop();
+            }
             Component::CurDir => {}
-            Component::RootDir => { result.push(Component::RootDir); }
+            Component::RootDir => {
+                result.push(Component::RootDir);
+            }
             c => result.push(c),
         }
     }
@@ -27,7 +31,10 @@ fn validate_symlink_target(target: &Path, base_dir: &Path) -> Result<(), String>
 
     for component in target.components() {
         if matches!(component, Component::ParentDir) {
-            return Err(format!("Symlink with path traversal rejected: {}", target.display()));
+            return Err(format!(
+                "Symlink with path traversal rejected: {}",
+                target.display()
+            ));
         }
     }
 
@@ -36,7 +43,8 @@ fn validate_symlink_target(target: &Path, base_dir: &Path) -> Result<(), String>
     if !resolved.starts_with(&normalized_base) {
         return Err(format!(
             "Symlink escapes install directory: {} -> {}",
-            base_dir.display(), target.display()
+            base_dir.display(),
+            target.display()
         ));
     }
 
@@ -70,7 +78,11 @@ pub struct BackendInstaller {
 
 impl BackendInstaller {
     pub fn new(install_dir: PathBuf, archive_url: String, expected_sha256: Option<String>) -> Self {
-        Self { install_dir, archive_url, expected_sha256 }
+        Self {
+            install_dir,
+            archive_url,
+            expected_sha256,
+        }
     }
 
     pub fn is_installed(&self) -> bool {
@@ -81,7 +93,9 @@ impl BackendInstaller {
 
     pub fn installed_version(&self) -> Option<String> {
         let version_file = self.install_dir.join("version.txt");
-        fs::read_to_string(version_file).ok().map(|s| s.trim().to_string())
+        fs::read_to_string(version_file)
+            .ok()
+            .map(|s| s.trim().to_string())
     }
 
     pub fn check_disk_space(&self) -> Result<(), String> {
@@ -111,7 +125,11 @@ impl BackendInstaller {
         Ok(())
     }
 
-    pub fn install<F>(&self, progress_callback: F, cancel_token: Arc<AtomicBool>) -> Result<(), String>
+    pub fn install<F>(
+        &self,
+        progress_callback: F,
+        cancel_token: Arc<AtomicBool>,
+    ) -> Result<(), String>
     where
         F: Fn(DownloadProgress) + Send + Sync,
     {
@@ -188,32 +206,37 @@ impl BackendInstaller {
     where
         F: Fn(DownloadProgress) + Send + Sync,
     {
-        let agent = ureq::AgentBuilder::new()
-            .timeout_connect(std::time::Duration::from_secs(30))
-            .timeout_read(std::time::Duration::from_secs(300))
-            .build();
+        let agent = ureq::Agent::new_with_config(
+            ureq::config::Config::builder()
+                .timeout_connect(Some(std::time::Duration::from_secs(30)))
+                .timeout_global(Some(std::time::Duration::from_secs(300)))
+                .build(),
+        );
 
-        let response = agent.get(&self.archive_url)
-            .call()
-            .map_err(|e| match e {
-                ureq::Error::Status(code, _) => format!("Download failed: server returned HTTP {}", code),
-                other => format!("Failed to connect to download server: {}", other),
-            })?;
+        let response = agent.get(&self.archive_url).call().map_err(|e| match e {
+            ureq::Error::StatusCode(code) => {
+                format!("Download failed: server returned HTTP {}", code)
+            }
+            _ => format!("Failed to connect to download server: {}", e),
+        })?;
 
-        let status = response.status();
-        if status < 200 || status >= 300 {
+        let status = response.status().as_u16();
+        if !(200..300).contains(&status) {
             return Err(format!("Download failed: server returned HTTP {}", status));
         }
 
-        let total_bytes: u64 = response.header("Content-Length")
+        let total_bytes: u64 = response
+            .headers()
+            .get("Content-Length")
+            .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse().ok())
             .unwrap_or(0);
 
-        let file = fs::File::create(dest)
-            .map_err(|e| format!("Failed to create archive file: {}", e))?;
+        let file =
+            fs::File::create(dest).map_err(|e| format!("Failed to create archive file: {}", e))?;
         let mut writer = BufWriter::with_capacity(1024 * 1024, file);
 
-        let mut reader = response.into_reader();
+        let mut reader = response.into_body().into_reader();
         let mut buf = vec![0u8; 256 * 1024];
         let mut bytes_downloaded: u64 = 0;
         let mut last_report = std::time::Instant::now();
@@ -223,31 +246,38 @@ impl BackendInstaller {
                 return Err("Download cancelled".to_string());
             }
 
-            let n = reader.read(&mut buf)
+            let n = reader
+                .read(&mut buf)
                 .map_err(|e| format!("Download read error: {}", e))?;
             if n == 0 {
                 break;
             }
 
-            writer.write_all(&buf[..n])
+            writer
+                .write_all(&buf[..n])
                 .map_err(|e| format!("Download write error: {}", e))?;
 
             bytes_downloaded += n as u64;
 
-            if last_report.elapsed() >= std::time::Duration::from_millis(500) || bytes_downloaded == total_bytes {
+            if last_report.elapsed() >= std::time::Duration::from_millis(500)
+                || bytes_downloaded == total_bytes
+            {
                 progress_callback(DownloadProgress {
                     phase: Phase::Downloading,
                     bytes_downloaded,
                     total_bytes,
-                    message: format!("Downloading... {} / {} MB",
+                    message: format!(
+                        "Downloading... {} / {} MB",
                         bytes_downloaded / (1024 * 1024),
-                        total_bytes / (1024 * 1024)),
+                        total_bytes / (1024 * 1024)
+                    ),
                 });
                 last_report = std::time::Instant::now();
             }
         }
 
-        writer.flush()
+        writer
+            .flush()
             .map_err(|e| format!("Failed to flush download: {}", e))?;
 
         Ok(())
@@ -261,7 +291,8 @@ impl BackendInstaller {
 
         let mut buf = [0u8; 256 * 1024];
         loop {
-            let n = reader.read(&mut buf)
+            let n = reader
+                .read(&mut buf)
                 .map_err(|e| format!("Checksum read error: {}", e))?;
             if n == 0 {
                 break;
@@ -289,8 +320,8 @@ impl BackendInstaller {
     where
         F: Fn(DownloadProgress) + Send + Sync,
     {
-        let file = fs::File::open(archive_path)
-            .map_err(|e| format!("Failed to open archive: {}", e))?;
+        let file =
+            fs::File::open(archive_path).map_err(|e| format!("Failed to open archive: {}", e))?;
         let decoder = GzDecoder::new(file);
         let mut archive = Archive::new(decoder);
 
@@ -303,7 +334,8 @@ impl BackendInstaller {
             .map_err(|e| format!("Failed to create extraction directory: {}", e))?;
 
         let mut extracted = 0u64;
-        let entries = archive.entries()
+        let entries = archive
+            .entries()
             .map_err(|e| format!("Failed to read archive entries: {}", e))?;
 
         for entry in entries {
@@ -311,10 +343,10 @@ impl BackendInstaller {
                 return Err("Extraction cancelled".to_string());
             }
 
-            let mut entry = entry
-                .map_err(|e| format!("Failed to read archive entry: {}", e))?;
+            let mut entry = entry.map_err(|e| format!("Failed to read archive entry: {}", e))?;
 
-            let entry_path = entry.path()
+            let entry_path = entry
+                .path()
                 .map_err(|e| format!("Invalid archive entry path: {}", e))?
                 .into_owned();
 
@@ -326,21 +358,29 @@ impl BackendInstaller {
             let dest = tmp_extract.join(&entry_path);
 
             if let Some(parent) = dest.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+                fs::create_dir_all(parent).map_err(|e| {
+                    format!("Failed to create directory {}: {}", parent.display(), e)
+                })?;
             }
 
             let entry_type = entry.header().entry_type();
             match entry_type {
                 tar::EntryType::Symlink => {
-                    let link_target = entry.link_name()
+                    let link_target = entry
+                        .link_name()
                         .map_err(|e| format!("Failed to read symlink target: {}", e))?
-                        .ok_or_else(|| format!("Symlink entry {} has no target", entry_path.display()))?
+                        .ok_or_else(|| {
+                            format!("Symlink entry {} has no target", entry_path.display())
+                        })?
                         .into_owned();
 
                     if let Err(e) = validate_symlink_target(&link_target, &tmp_extract) {
-                        eprintln!("Warning: Skipping unsafe symlink {} -> {}: {}",
-                            entry_path.display(), link_target.display(), e);
+                        eprintln!(
+                            "Warning: Skipping unsafe symlink {} -> {}: {}",
+                            entry_path.display(),
+                            link_target.display(),
+                            e
+                        );
                         continue;
                     }
 
@@ -349,27 +389,37 @@ impl BackendInstaller {
                     }
 
                     #[cfg(unix)]
-                    std::os::unix::fs::symlink(&link_target, &dest)
-                        .map_err(|e| format!("Failed to create symlink {} -> {}: {}",
-                            dest.display(), link_target.display(), e))?;
+                    std::os::unix::fs::symlink(&link_target, &dest).map_err(|e| {
+                        format!(
+                            "Failed to create symlink {} -> {}: {}",
+                            dest.display(),
+                            link_target.display(),
+                            e
+                        )
+                    })?;
                     #[cfg(not(unix))]
                     {
                         let _ = &link_target;
-                        eprintln!("Warning: Skipping symlink on non-Unix: {}", entry_path.display());
+                        eprintln!(
+                            "Warning: Skipping symlink on non-Unix: {}",
+                            entry_path.display()
+                        );
                         continue;
                     }
                 }
                 tar::EntryType::Directory => {
-                    fs::create_dir_all(&dest)
-                        .map_err(|e| format!("Failed to create directory {}: {}", dest.display(), e))?;
+                    fs::create_dir_all(&dest).map_err(|e| {
+                        format!("Failed to create directory {}: {}", dest.display(), e)
+                    })?;
                 }
                 tar::EntryType::Link => {
                     eprintln!("Warning: Skipping hardlink: {}", entry_path.display());
                     continue;
                 }
                 _ => {
-                    entry.unpack(&dest)
-                        .map_err(|e| format!("Failed to extract {}: {}", entry_path.display(), e))?;
+                    entry.unpack(&dest).map_err(|e| {
+                        format!("Failed to extract {}: {}", entry_path.display(), e)
+                    })?;
 
                     #[cfg(unix)]
                     {
@@ -409,16 +459,24 @@ impl BackendInstaller {
 
                 if dest.exists() {
                     if dest.is_dir() {
-                        fs::remove_dir_all(&dest)
-                            .map_err(|e| format!("Failed to remove old {}: {}", dest.display(), e))?;
+                        fs::remove_dir_all(&dest).map_err(|e| {
+                            format!("Failed to remove old {}: {}", dest.display(), e)
+                        })?;
                     } else {
-                        fs::remove_file(&dest)
-                            .map_err(|e| format!("Failed to remove old {}: {}", dest.display(), e))?;
+                        fs::remove_file(&dest).map_err(|e| {
+                            format!("Failed to remove old {}: {}", dest.display(), e)
+                        })?;
                     }
                 }
 
-                fs::rename(&src, &dest)
-                    .map_err(|e| format!("Failed to move {} to {}: {}", src.display(), dest.display(), e))?;
+                fs::rename(&src, &dest).map_err(|e| {
+                    format!(
+                        "Failed to move {} to {}: {}",
+                        src.display(),
+                        dest.display(),
+                        e
+                    )
+                })?;
             }
 
             fs::remove_dir_all(&tmp_extract).ok();
@@ -493,16 +551,15 @@ pub fn resolve_path(base: &Path, relative: &Path) -> PathBuf {
 }
 
 pub fn default_install_dir() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|home| {
-        PathBuf::from(home).join(".local/share/comfyui-desktop")
-    })
+    std::env::var("HOME")
+        .ok()
+        .map(|home| PathBuf::from(home).join(".local/share/comfyui-desktop"))
 }
 
 pub fn backend_download_url() -> String {
     format!(
         "https://github.com/rakaarwaky/ComfyUi-arwaky/releases/download/backend-v{}/{}",
-        BACKEND_VERSION,
-        BACKEND_ARCHIVE_NAME
+        BACKEND_VERSION, BACKEND_ARCHIVE_NAME
     )
 }
 
@@ -530,7 +587,10 @@ mod tests {
 
     #[test]
     fn test_normalize_path_double_dot() {
-        assert_eq!(normalize_path(Path::new("/a/b/../c")), PathBuf::from("/a/c"));
+        assert_eq!(
+            normalize_path(Path::new("/a/b/../c")),
+            PathBuf::from("/a/c")
+        );
     }
 
     #[test]
