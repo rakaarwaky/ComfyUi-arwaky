@@ -313,11 +313,12 @@ fn parse_hsa_override(gfx: &str) -> Option<&'static str> {
     let major = &gfx[0..2];
     let patch = &gfx[3..4];
     if patch != "0" {
-      return Some(match major {
-        "10" => "10.3.0",
-        "11" => "11.0.0",
-        _ => "10.3.0",
-      });
+      return match major {
+        "10" => Some("10.3.0"),
+        "11" => Some("11.0.0"),
+        "12" => Some("12.0.0"),  // RDNA4 future-proof
+        _ => None,               // Unknown major: don't guess
+      };
     }
     return None;
   }
@@ -327,11 +328,12 @@ fn parse_hsa_override(gfx: &str) -> Option<&'static str> {
     if let Ok(patch) = parts[2].parse::<u32>() {
       if patch > 0 {
         let major = parts[0].parse::<u32>().unwrap_or(10);
-        return Some(match major {
-          10 => "10.3.0",
-          11 => "11.0.0",
-          _ => "10.3.0",
-        });
+        return match major {
+          10 => Some("10.3.0"),
+          11 => Some("11.0.0"),
+          12 => Some("12.0.0"),  // RDNA4
+          _ => None,             // Unknown major: safe default
+        };
       }
     }
   }
@@ -434,7 +436,10 @@ fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
   let stderr = child.stderr.take().expect("Failed to open stderr");
 
   let app_handle_stdout = app_handle.clone();
-  let log_tx_stdout = match app_handle_stdout.state::<LogSender>().tx.lock() {
+  let app_handle_stderr = app_handle.clone();
+
+  // Acquire LogSender ONCE, then clone for both stdout/stderr threads
+  let log_tx = match app_handle.state::<LogSender>().tx.lock() {
     Ok(guard) => match guard.clone() {
       Some(tx) => tx,
       None => return Err("LogSender already dropped".to_string()),
@@ -444,6 +449,9 @@ fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
       None => return Err("LogSender poisoned and empty".to_string()),
     },
   };
+  let log_tx_stdout = log_tx.clone();
+  let log_tx_stderr = log_tx;
+
   let stdout_handle = std::thread::spawn(move || {
     let stats = app_handle_stdout.state::<LogStats>();
     let reader = BufReader::new(stdout);
@@ -457,17 +465,6 @@ fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
     }
   });
 
-  let app_handle_stderr = app_handle.clone();
-  let log_tx_stderr = match app_handle_stderr.state::<LogSender>().tx.lock() {
-    Ok(guard) => match guard.clone() {
-      Some(tx) => tx,
-      None => return Err("LogSender already dropped".to_string()),
-    },
-    Err(poisoned) => match poisoned.into_inner().clone() {
-      Some(tx) => tx,
-      None => return Err("LogSender poisoned and empty".to_string()),
-    },
-  };
   let stderr_handle = std::thread::spawn(move || {
     let stats = app_handle_stderr.state::<LogStats>();
     let reader = BufReader::new(stderr);
@@ -745,7 +742,7 @@ pub fn run() {
 
       if is_installed {
         log_info(&app_handle, &format!("Backend installed (version: {:?})", version));
-        let _ = app_handle.emit("comfyui-backend-ready", ());
+        // Frontend handles this via check_backend_status() in checkAndStart()
       } else {
         log_info(&app_handle, "Backend not installed. Waiting for frontend trigger...");
         let _ = app_handle.emit("comfyui-download-start", ());
@@ -877,8 +874,21 @@ mod tests {
 
     #[test]
     fn test_parse_dotted_unknown_major() {
-        assert_eq!(parse_hsa_override("12.0.1"), Some("10.3.0"));
-        assert_eq!(parse_hsa_override("9.0.1"), Some("10.3.0"));
+        assert_eq!(parse_hsa_override("12.0.1"), Some("12.0.0"));
+        assert_eq!(parse_hsa_override("9.0.1"), None);
+    }
+
+    #[test]
+    fn test_parse_unknown_major_returns_none() {
+        assert_eq!(parse_hsa_override("9931"), None);
+        assert_eq!(parse_hsa_override("1301"), None);
+    }
+
+    #[test]
+    fn test_parse_rdna4_future() {
+        assert_eq!(parse_hsa_override("1200"), None);
+        assert_eq!(parse_hsa_override("1201"), Some("12.0.0"));
+        assert_eq!(parse_hsa_override("12.0.1"), Some("12.0.0"));
     }
 
     #[test]
@@ -915,14 +925,6 @@ mod tests {
     }
 
     // --- downloader integration ---
-
-    #[test]
-    fn test_downloader_resolve_path_integration() {
-        let base = Path::new("/tmp/install");
-        let relative = Path::new("venv/bin/python");
-        let resolved = downloader::resolve_path(base, relative);
-        assert_eq!(resolved, PathBuf::from("/tmp/install/venv/bin/python"));
-    }
 
     #[test]
     fn test_downloader_normalize_path_integration() {

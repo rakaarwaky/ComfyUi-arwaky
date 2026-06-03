@@ -20,27 +20,29 @@ EOF
 
 TAG=false
 BACKEND=""
+NEW_VER=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help) usage ;;
     --backend) BACKEND="$2"; shift 2 ;;
     --tag) TAG=true; shift ;;
-    -*)
-      if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    [0-9]*.[0-9]*.[0-9]*)
+      if [[ -z "$NEW_VER" ]]; then
         NEW_VER="$1"
         shift
       else
-        echo "Unknown option: $1"; exit 1
+        echo "❌ Multiple versions specified: $NEW_VER and $1"
+        exit 1
       fi
       ;;
+    -*)
+      echo "❌ Unknown option: $1"
+      usage
+      ;;
     *)
-      if [[ -z "${NEW_VER:-}" ]] && [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        NEW_VER="$1"
-        shift
-      else
-        echo "Unknown argument: $1"; exit 1
-      fi
+      echo "❌ Unknown argument: $1"
+      usage
       ;;
   esac
 done
@@ -51,19 +53,48 @@ if [[ -z "${NEW_VER:-}" ]]; then
   usage
 fi
 
+if [[ ! "$NEW_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+  echo "❌ Invalid version format: $NEW_VER (expected: X.Y.Z or X.Y.Z-pre)"
+  exit 1
+fi
+
+if [[ ! -f src-tauri/Cargo.toml ]]; then
+  echo "❌ src-tauri/Cargo.toml not found. Run from project root."
+  exit 1
+fi
+
 echo "=== Bumping app version to $NEW_VER ==="
 
-# 1. Cargo.toml
+# 1. Cargo.toml (sed-based, no cargo-edit dependency)
 echo "[1/3] Updating src-tauri/Cargo.toml..."
-cargo set-version --manifest-path src-tauri/Cargo.toml "$NEW_VER"
+if ! sed -i "s/^version = \"[^\"]*\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml; then
+  echo "❌ Failed to update Cargo.toml"
+  exit 1
+fi
+if [ -f src-tauri/Cargo.lock ]; then
+  sed -i "0,/^name = \"app\"$/{
+    /^name = \"app\"$/,/^version = \"[^\"]*\"$/{
+      s/^version = \"[^\"]*\"$/version = \"$NEW_VER\"/
+    }
+  }" src-tauri/Cargo.lock
+fi
+ACTUAL_VER=$(grep -m1 '^version' src-tauri/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+if [ "$ACTUAL_VER" != "$NEW_VER" ]; then
+  echo "❌ Version update failed. Expected $NEW_VER, got $ACTUAL_VER"
+  exit 1
+fi
+echo "  ✅ Cargo.toml version: $NEW_VER"
 
 # 2. tauri.conf.json
 echo "[2/3] Updating src-tauri/tauri.conf.json..."
 if command -v jq &>/dev/null; then
   tmp=$(mktemp)
-  jq --arg v "$NEW_VER" '.version = $v' src-tauri/tauri.conf.json > "$tmp" && mv "$tmp" src-tauri/tauri.conf.json
+  jq --arg v "$NEW_VER" '.version = $v' src-tauri/tauri.conf.json > "$tmp" \
+    && mv "$tmp" src-tauri/tauri.conf.json \
+    && echo "  ✅ tauri.conf.json version: $NEW_VER"
 else
-  sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VER\"/" src-tauri/tauri.conf.json
+  sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VER\"/" src-tauri/tauri.conf.json
+  echo "  ✅ tauri.conf.json version: $NEW_VER (sed fallback, install jq for better parsing)"
 fi
 
 # 3. BACKEND_VERSION (optional)

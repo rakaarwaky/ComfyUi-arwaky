@@ -1,0 +1,286 @@
+name: CI Multi-Distro
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ==========================================================================
+  # Stage 1: Lint & Test (distro-independent)
+  # ==========================================================================
+  lint-test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps (for Tauri)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev jq shellcheck
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo fmt
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: cargo check
+        run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml --all-features
+
+      - name: shellcheck scripts
+        run: |
+          find scripts/ -name "*.sh" -type f -print0 | \
+            xargs -0 shellcheck --severity=warning
+
+      - name: Validate tauri.conf.json
+        run: jq empty src-tauri/tauri.conf.json
+
+  # ==========================================================================
+  # Stage 2: Build on multiple distros
+  # ==========================================================================
+  build-matrix:
+    name: Build on ${{ matrix.distro }}
+    needs: lint-test
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora-40
+            image: fedora:40
+            pkg_manager: dnf
+          - distro: fedora-41
+            image: fedora:41
+            pkg_manager: dnf
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+            pkg_manager: apt
+          - distro: ubuntu-22.04
+            image: ubuntu:22.04
+            pkg_manager: apt
+
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+
+    steps:
+      - name: Install system deps (Fedora)
+        if: matrix.pkg_manager == 'dnf'
+        run: |
+          dnf install -y \
+            webkit2gtk4.1-devel gtk3-devel libappindicator-gtk3-devel \
+            librsvg2-devel patchelf openssl-devel \
+            git curl wget tar gzip which findutils \
+            gcc gcc-c++ make pkgconf-pkg-config \
+            rpm-build jq
+
+      - name: Install system deps (Ubuntu)
+        if: matrix.pkg_manager == 'apt'
+        run: |
+          apt-get update
+          apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev \
+            git curl wget ca-certificates \
+            build-essential pkg-config \
+            jq
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        env:
+          CARGO_HOME: ${{ github.workspace }}/.cargo
+          RUSTUP_HOME: ${{ github.workspace }}/.rustup
+
+      - name: Verify Rust
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Install Node.js 20
+        run: |
+          if command -v apt-get &>/dev/null; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+          else
+            dnf install -y nodejs || \
+              (curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs)
+          fi
+          node --version
+          npm --version
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cargo/bin/
+            .cargo/registry/
+            .cargo/git/
+            src-tauri/target/
+          key: ${{ matrix.distro }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.distro }}-cargo-
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend with Vite
+        run: npm run build
+
+      - name: Verify Vite output
+        run: |
+          if [ ! -f frontend/dist/index.html ]; then
+            echo "frontend/dist/index.html not found"
+            exit 1
+          fi
+          echo "Frontend built successfully"
+          ls -lh frontend/dist/
+
+      - name: Build Tauri app
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          npm run tauri build
+        env:
+          CARGO_HOME: ${{ github.workspace }}/.cargo
+          RUSTUP_HOME: ${{ github.workspace }}/.rustup
+
+      - name: List build artifacts
+        run: |
+          echo "=== Bundle outputs ==="
+          find src-tauri/target/release/bundle -type f \
+            \( -name "*.AppImage" -o -name "*.rpm" -o -name "*.deb" \) \
+            -exec ls -lh {} \; 2>/dev/null || echo "No bundles found"
+          echo ""
+          echo "=== Binary ==="
+          ls -lh src-tauri/target/release/app 2>/dev/null || echo "Binary not found"
+
+      - name: Upload AppImage (${{ matrix.distro }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-${{ matrix.distro }}
+          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload RPM (${{ matrix.distro }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.distro }}
+          path: src-tauri/target/release/bundle/rpm/*.rpm
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload DEB (${{ matrix.distro }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.distro }}
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ==========================================================================
+  # Stage 3: Smoke test install on distros
+  # ==========================================================================
+  smoke-test:
+    name: Smoke test on ${{ matrix.distro }}
+    needs: build-matrix
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora-40
+            image: fedora:40
+            artifact: rpm-fedora-40
+            install_cmd: "dnf install -y"
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+            artifact: deb-ubuntu-24.04
+            install_cmd: "apt-get install -y"
+
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./pkg
+
+      - name: Install package
+        run: |
+          if command -v apt-get &>/dev/null; then
+            apt-get update
+            apt-get install -y \
+              libwebkit2gtk-4.1-0 libgtk-3-0 libappindicator3-1 \
+              librsvg2-2 libssl3
+            apt-get install -y ./pkg/*.deb
+          else
+            dnf install -y ./pkg/*.rpm
+          fi
+          echo "Package installed"
+
+      - name: Verify desktop entry
+        run: |
+          if [ -f /usr/share/applications/comfyui-desktop.desktop ]; then
+            echo "Desktop entry found"
+            cat /usr/share/applications/comfyui-desktop.desktop
+          else
+            echo "Desktop entry not found (not bundled)"
+          fi
+
+  # ==========================================================================
+  # Final: Summary
+  # ==========================================================================
+  ci-summary:
+    name: CI Summary
+    needs: [lint-test, build-matrix, smoke-test]
+    runs-on: ubuntu-24.04
+    if: always()
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "Lint & Test:    ${{ needs.lint-test.result }}"
+          echo "Build Matrix:   ${{ needs.build-matrix.result }}"
+          echo "Smoke Test:     ${{ needs.smoke-test.result }}"
+          if [[ "${{ needs.lint-test.result }}" != "success" ]]; then
+            echo "Lint/Test failed"
+            exit 1
+          fi
+          echo "CI passed"

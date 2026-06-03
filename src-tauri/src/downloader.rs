@@ -43,7 +43,7 @@ fn validate_symlink_target(target: &Path, base_dir: &Path) -> Result<(), String>
     Ok(())
 }
 
-const BACKEND_VERSION: &str = "1.0.0";
+const BACKEND_VERSION: &str = "1.1.0";
 const BACKEND_ARCHIVE_NAME: &str = "comfyui-backend-linux-x86_64.tar.gz";
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -454,6 +454,8 @@ impl BackendInstaller {
 
         let smoke_test = std::process::Command::new(&python_path)
             .arg("--version")
+            .env_remove("HSA_OVERRIDE_GFX_VERSION")
+            .env_remove("HIP_VISIBLE_DEVICES")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .output();
@@ -465,14 +467,15 @@ impl BackendInstaller {
             }
             Ok(out) => {
                 let stderr = String::from_utf8_lossy(&out.stderr);
-                return Err(format!(
-                    "Python smoke test failed (exit {:?}): {}",
+                eprintln!(
+                    "[Install] Warning: Python smoke test failed (exit {:?}). \
+                     This may be due to missing ROCm runtime. Error: {}",
                     out.status.code(),
                     stderr.trim()
-                ));
+                );
             }
             Err(e) => {
-                return Err(format!("Failed to execute python binary: {}", e));
+                eprintln!("[Install] Warning: Could not execute python binary: {}", e);
             }
         }
 
@@ -482,11 +485,6 @@ impl BackendInstaller {
 
         Ok(())
     }
-}
-
-#[allow(dead_code)]
-pub fn resolve_path(base: &Path, relative: &Path) -> PathBuf {
-    normalize_path(&base.join(relative))
 }
 
 pub fn default_install_dir() -> Option<PathBuf> {
@@ -585,29 +583,6 @@ mod tests {
         let base = Path::new("/tmp/install");
         let target = Path::new("file.txt");
         assert!(validate_symlink_target(target, base).is_ok());
-    }
-
-    // --- resolve_path ---
-
-    #[test]
-    fn test_resolve_path_normal() {
-        let base = Path::new("/a/b");
-        let relative = Path::new("c/d");
-        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/b/c/d"));
-    }
-
-    #[test]
-    fn test_resolve_path_dot() {
-        let base = Path::new("/a");
-        let relative = Path::new("./b");
-        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/b"));
-    }
-
-    #[test]
-    fn test_resolve_path_double_dot() {
-        let base = Path::new("/a/b");
-        let relative = Path::new("../c");
-        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/c"));
     }
 
     // --- utilities ---

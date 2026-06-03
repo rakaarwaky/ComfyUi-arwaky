@@ -89,16 +89,22 @@ else
 fi
 
 # === Step 6: config validation ===
-run_step "tauri config validation" "python3 -c 'import json,sys; json.load(open(\"src-tauri/tauri.conf.json\")); print(\"valid\")'"
+if command -v jq &>/dev/null; then
+  run_step "tauri config validation" "jq empty src-tauri/tauri.conf.json"
+elif command -v python3 &>/dev/null; then
+  run_step "tauri config validation" "python3 -c 'import json; json.load(open(\"src-tauri/tauri.conf.json\")); print(\"valid\")'"
+else
+  skip "tauri config validation (install jq or python3)"
+fi
 
 # === Step 7: cargo-audit (if available) ===
 if $FAST || $SKIP_AUDIT; then
   skip "cargo-audit (skipped)"
 else
-  if command -v cargo-audit &>/dev/null || cargo audit --version &>/dev/null 2>&1; then
+  if cargo audit --version &>/dev/null 2>&1; then
     run_step "cargo-audit" "cargo audit --manifest-path src-tauri/Cargo.toml"
   else
-    skip "cargo-audit (not installed)"
+    skip "cargo-audit (not installed, run: cargo install cargo-audit --locked)"
   fi
 fi
 

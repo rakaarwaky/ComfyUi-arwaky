@@ -1,3 +1,13 @@
+// Local imports (no CDN dependency, enables offline mode)
+import { invoke } from './tauri-api/core.js';
+import { listen } from './tauri-api/event.js';
+
+// Set up window.__TAURI__ for backward compatibility
+window.__TAURI__ = {
+  core: { invoke },
+  event: { listen },
+};
+
 // Get DOM elements
 const statusTextEl = document.getElementById("status-text");
 const progressFillEl = document.getElementById("progress-fill");

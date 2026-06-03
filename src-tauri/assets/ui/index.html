@@ -89,17 +89,6 @@
         </div>
     </div>
 
-    <script type="module">
-      import { invoke, convertFileSrc } from 'https://esm.sh/@tauri-apps/api@2/core';
-      import { listen } from 'https://esm.sh/@tauri-apps/api@2/event';
-      import { getCurrentWindow } from 'https://esm.sh/@tauri-apps/api@2/window';
-
-      window.__TAURI__ = {
-        core: { invoke },
-        event: { listen },
-        window: { getCurrentWindow },
-      };
-    </script>
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -44,16 +44,9 @@ updates:
       - "dependencies"
       - "submodule"
 
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "monday"
-      time: "09:00"
-      timezone: "Asia/Jakarta"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "python"
+  # pip ecosystem disabled: requirements.txt uses direct wheel URLs
+  # which Dependabot cannot parse. Migrate to package names to re-enable.
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "monthly"

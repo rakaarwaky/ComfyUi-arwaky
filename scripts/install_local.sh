@@ -44,18 +44,23 @@ else
     exit 1
 fi
 
-# 2. Install application icons
+# 2. Install application icons (auto-detect all sizes)
 echo "  Installing icons..."
-ICON_SIZES=("32x32" "128x128" "256x256@2")
-for SIZE in "${ICON_SIZES[@]}"; do
-    SRC_ICON="./usr/share/icons/hicolor/$SIZE/apps/app.png"
-    DEST_ICON_DIR="$LOCAL_DIR/share/icons/hicolor/$SIZE/apps"
-    if [ -f "$SRC_ICON" ]; then
-        mkdir -p "$DEST_ICON_DIR"
-        cp "$SRC_ICON" "$DEST_ICON_DIR/comfyui-desktop.png"
-        echo "    ✅ Icon $SIZE installed"
+ICON_COUNT=0
+while IFS= read -r -d '' SRC_ICON; do
+    SIZE=$(echo "$SRC_ICON" | sed -n 's|.*/hicolor/\([^/]*\)/apps/.*|\1|p')
+    if [ -z "$SIZE" ]; then
+        continue
     fi
-done
+    DEST_ICON_DIR="$LOCAL_DIR/share/icons/hicolor/$SIZE/apps"
+    mkdir -p "$DEST_ICON_DIR"
+    cp "$SRC_ICON" "$DEST_ICON_DIR/comfyui-desktop.png"
+    echo "    ✅ Icon $SIZE installed"
+    ((ICON_COUNT++))
+done < <(find ./usr/share/icons/hicolor -name "app.png" -type f -print0 2>/dev/null)
+if [ $ICON_COUNT -eq 0 ]; then
+    echo "    ⚠️  No icons found in RPM (this may be normal if icons aren't bundled)"
+fi
 
 # 3. Install desktop entry file
 mkdir -p "$LOCAL_DIR/share/applications"
