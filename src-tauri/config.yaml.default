@@ -17,3 +17,11 @@
 # Path to the extra_model_paths.yaml file (optional)
 # Example: "/home/user/App/ComfyUi-arwaky/extra_model_paths.yaml"
 # extra_model_paths: ""
+
+# Custom output directory for generated images (optional)
+# Example: "~/SharedData/Output"
+# output_dir: ""
+
+# Custom input directory for source images (optional)
+# Example: "~/SharedData/Input"
+# input_dir: ""

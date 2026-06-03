@@ -17,6 +17,8 @@ struct AppConfig {
     python_path: Option<String>,
     comfyui_dir: Option<String>,
     extra_model_paths: Option<String>,
+    output_dir: Option<String>,
+    input_dir: Option<String>,
 }
 
 fn ensure_user_config(app_handle: &tauri::AppHandle) {
@@ -500,8 +502,17 @@ fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
         p
     };
 
+    let output_dir = user_config.output_dir.as_ref().map(std::path::PathBuf::from);
+    let input_dir = user_config.input_dir.as_ref().map(std::path::PathBuf::from);
+
     log_info(app_handle, &format!("Python Path: {:?}", python_path));
     log_info(app_handle, &format!("Working Directory: {:?}", comfyui_dir));
+    if let Some(ref d) = output_dir {
+        log_info(app_handle, &format!("Output Directory: {:?}", d));
+    }
+    if let Some(ref d) = input_dir {
+        log_info(app_handle, &format!("Input Directory: {:?}", d));
+    }
 
     let gpu_index = detect_dgpu_index();
     let hsa_override = detect_hsa_override();
@@ -525,8 +536,14 @@ fn spawn_comfyui_process(app_handle: &tauri::AppHandle) -> Result<(), String> {
     let mut cmd = std::process::Command::new(&python_path);
     cmd.arg("main.py")
         .arg("--extra-model-paths-config")
-        .arg(&extra_model_paths)
-        .current_dir(&comfyui_dir)
+        .arg(&extra_model_paths);
+    if let Some(ref out_dir) = output_dir {
+        cmd.arg("--output-directory").arg(out_dir);
+    }
+    if let Some(ref in_dir) = input_dir {
+        cmd.arg("--input-directory").arg(in_dir);
+    }
+    cmd.current_dir(&comfyui_dir)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .env("HIP_VISIBLE_DEVICES", &gpu_index)

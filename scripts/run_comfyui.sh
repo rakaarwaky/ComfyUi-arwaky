@@ -26,4 +26,6 @@ source "$ROOT_DIR/venv/bin/activate"
 echo "Starting ComfyUI Server with external model configuration..."
 python "$ROOT_DIR/ComfyUI/main.py" \
   --extra-model-paths-config "$ROOT_DIR/extra_model_paths.yaml" \
+  --output-directory "$HOME/SharedData/Output" \
+  --input-directory "$HOME/SharedData/Input" \
   "$@"

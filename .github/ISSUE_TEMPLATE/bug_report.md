@@ -39,7 +39,7 @@ Paste logs here
 
 ## Environment
 
-- **OS**: [e.g., Fedora 40]
+- **OS**: [e.g., Fedora 44]
 - **GPU**: [e.g., AMD RX 6800 XT]
 - **ROCm Version**: [e.g., 7.2.4]
 - **Python Version**: [e.g., 3.12]
