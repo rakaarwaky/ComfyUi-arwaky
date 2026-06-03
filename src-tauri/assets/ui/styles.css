@@ -93,6 +93,11 @@ body {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
     text-align: center;
     animation: fadeInScale 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.launcher-container.expanded {
+    width: 600px;
 }
 
 @keyframes fadeInScale {
@@ -180,16 +185,11 @@ body {
 }
 
 .spinner .fill {
-    stroke: url(#spinner-grad);
+    stroke: var(--primary);
     stroke-linecap: round;
     stroke-dasharray: 283; /* 2 * PI * r (r=45) */
     stroke-dashoffset: 280;
     animation: spinFill 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Injecting gradient to SVG from CSS is tricky, we define standard stroke gradients */
-.spinner .fill {
-    stroke: var(--primary);
 }
 
 .spinner-icon {
@@ -197,10 +197,18 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 32px;
-    height: 32px;
-    color: var(--primary);
-    animation: floatIcon 3s infinite ease-in-out;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulseLogo 3s infinite ease-in-out;
+}
+
+.spinner-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 @keyframes pulseGlow {
@@ -231,14 +239,14 @@ body {
     }
 }
 
-@keyframes floatIcon {
+@keyframes pulseLogo {
     0%, 100% {
-        transform: translate(-50%, -55%);
-        color: var(--primary);
+        transform: translate(-50%, -50%) scale(1);
+        filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.4));
     }
     50% {
-        transform: translate(-50%, -45%);
-        color: var(--secondary);
+        transform: translate(-50%, -50%) scale(1.06);
+        filter: drop-shadow(0 0 16px rgba(236, 72, 153, 0.7));
     }
 }
 
@@ -298,4 +306,262 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 10px var(--primary-glow);
     transition: width 0.4s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+/* System Logs Panel */
+.logs-panel {
+    margin-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 15px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.logs-header:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.logs-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.terminal-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.logs-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-copy {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-outfit);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-copy svg {
+    width: 12px;
+    height: 12px;
+}
+
+.btn-copy:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #c084fc;
+}
+
+.btn-copy.success {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    color: #34d399 !important;
+}
+
+.btn-toggle {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 4px;
+    transition: transform 0.3s ease;
+}
+
+.btn-toggle svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Collapsed vs Expanded States */
+.logs-panel.collapsed .logs-viewport {
+    height: 0;
+    opacity: 0;
+    margin-top: 0;
+    padding: 0 10px;
+    border-color: transparent;
+    pointer-events: none;
+}
+
+.logs-panel.collapsed .btn-toggle {
+    transform: rotate(180deg);
+}
+
+.logs-viewport {
+    margin-top: 12px;
+    height: 150px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    padding: 10px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+    opacity: 1;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.logs-viewport::-webkit-scrollbar {
+    width: 6px;
+}
+.logs-viewport::-webkit-scrollbar-track {
+    background: transparent;
+}
+.logs-viewport::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+.logs-viewport::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.logs-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-line {
+    word-break: break-all;
+    line-height: 1.3;
+    white-space: pre-wrap;
+}
+
+.log-line.system {
+    color: #c084fc; /* Violet light */
+}
+
+.log-line.stdout {
+    color: #e4e4e7;
+}
+
+.log-line.stderr {
+    color: #fca5a5;
+}
+
+.log-line.error {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+/* Failed/Error States (For rendering failure alerts) */
+.failed .glow-ring {
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.4) !important;
+}
+.failed .spinner .fill {
+    stroke: #ef4444 !important;
+    animation: none !important;
+}
+.failed .spinner-icon {
+    animation: none !important;
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.6)) !important;
+}
+.failed .spinner-icon svg rect {
+    fill: #450a0a !important;
+    transition: fill 0.5s ease;
+}
+.failed .spinner-icon svg path {
+    fill: #ef4444 !important;
+    transition: fill 0.5s ease;
+}
+.failed .pulse-dot {
+    background-color: #ef4444 !important;
+    box-shadow: 0 0 8px #ef4444 !important;
+    animation: none !important;
+}
+.failed .progress-fill {
+    background: #ef4444 !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4) !important;
+    width: 100% !important;
+}
+
+/* Download Action Buttons */
+.download-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+    min-height: 0;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    max-height: 0;
+}
+
+.download-actions.visible {
+    opacity: 1;
+    max-height: 50px;
+}
+
+.btn-action {
+    font-family: var(--font-outfit);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: none;
+}
+
+.btn-action.visible {
+    display: inline-block;
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+}
+
+.btn-cancel:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.btn-retry {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c084fc;
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.btn-retry:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: rgba(139, 92, 246, 0.5);
 }

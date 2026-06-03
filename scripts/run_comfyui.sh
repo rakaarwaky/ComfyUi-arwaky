@@ -1,25 +1,29 @@
-#!/bin/bash
-# ComfyUI ROCm Startup Script
+#!/usr/bin/env bash
+# ==============================================================================
+# run_comfyui.sh — Run ComfyUI Server standalone (without wrapper)
+# ==============================================================================
 
-# 1. Pastikan driver GPU sudah terikat (bind) jika belum
-if [ ! -d "/sys/bus/pci/devices/0000:12:00.0/driver" ]; then
-    echo "Peringatan: Driver GPU Radeon RX 6800 tidak aktif. Mencoba mengikat driver..."
-    sudo /usr/local/bin/fix-amdgpu.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Auto-detect discrete GPU (dGPU) by comparing the largest VRAM sizes
+DETECTED_GPU=$(rocm-smi --showmeminfo vram 2>/dev/null | grep "VRAM Total Memory" | awk -F'[][]' '{print $2, $NF}' | awk '{print $1, $NF}' | sort -k2 -rn | head -n 1 | awk '{print $1}')
+
+if [ -z "$DETECTED_GPU" ]; then
+  # Fallback default to GPU 0 if rocm-smi fails/is not present
+  DETECTED_GPU="0"
 fi
 
-# 2. Arahkan ke direktori kerja parent
-cd "$(dirname "$0")"
+echo "Smart GPU Detection: Using GPU $DETECTED_GPU (discrete GPU with largest VRAM)"
 
-# 3. Aktifkan Virtual Environment
-source venv/bin/activate
+export HIP_VISIBLE_DEVICES="$DETECTED_GPU"
+export HSA_OVERRIDE_GFX_VERSION="10.3.0"
 
-# 4. Batasi akses GPU hanya untuk Radeon RX 6800 XT (Device 1)
-# Ini untuk mencegah PyTorch mendeteksi integrated graphics (Cezanne APU)
-export HIP_VISIBLE_DEVICES="1"
+# Activate virtual environment
+source "$ROOT_DIR/venv/bin/activate"
 
-# 5. Masuk ke direktori repositori resmi ComfyUI
-cd ComfyUI
-
-# 6. Jalankan ComfyUI
-echo "Menjalankan ComfyUI pada Radeon RX 6800 XT..."
-python main.py "$@"
+# Run ComfyUI with external model configuration
+echo "Starting ComfyUI Server with external model configuration..."
+python "$ROOT_DIR/ComfyUI/main.py" \
+  --extra-model-paths-config "$ROOT_DIR/extra_model_paths.yaml" \
+  "$@"

@@ -7,18 +7,22 @@
     "frontendDist": "./assets/ui"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
+        "label": "main",
         "title": "ComfyUI Desktop",
-        "width": 800,
-        "height": 600,
+        "width": 1600,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "url": "index.html"
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: http://127.0.0.1:8188 ws://127.0.0.1:8188; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:8188 ws://127.0.0.1:8188 https://esm.sh; img-src 'self' data: blob: http://127.0.0.1:8188 https://*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com",
       "capabilities": [
         {
           "identifier": "default",
@@ -35,16 +39,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["appimage", "rpm", "deb"],
     "icon": [
       "assets/icons/32x32.png",
       "assets/icons/128x128.png",
       "assets/icons/128x128@2x.png",
       "assets/icons/icon.icns",
       "assets/icons/icon.ico"
-    ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
-    }
+    ]
   }
 }

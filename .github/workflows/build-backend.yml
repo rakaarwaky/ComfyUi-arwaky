@@ -1,0 +1,167 @@
+name: Build Backend Archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_version:
+        description: 'Backend version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      python_version:
+        description: 'Python version'
+        required: true
+        default: '3.12'
+      create_release:
+        description: 'Create GitHub Release'
+        required: true
+        type: boolean
+        default: true
+
+env:
+  BACKEND_VERSION: ${{ github.event.inputs.backend_version }}
+  PYTHON_VERSION: ${{ github.event.inputs.python_version }}
+
+jobs:
+  build-backend:
+    name: Build Linux Backend Archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Free up disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo apt-get clean
+          df -h /
+
+      - name: Create staging directory
+        run: mkdir -p backend-staging
+
+      - name: Create venv with --copies
+        run: |
+          python -m venv --copies backend-staging/venv
+          source backend-staging/venv/bin/activate
+          pip install --upgrade pip
+
+      - name: Install Python dependencies
+        run: |
+          source backend-staging/venv/bin/activate
+          pip install -r requirements.txt
+        env:
+          PIP_NO_CACHE_DIR: 1
+
+      - name: Verify PyTorch
+        run: |
+          source backend-staging/venv/bin/activate
+          python -c "
+          import torch
+          print(f'PyTorch: {torch.__version__}')
+          if hasattr(torch.version, 'hip'):
+              print(f'ROCm: {torch.version.hip}')
+          "
+
+      - name: Copy ComfyUI source
+        run: |
+          rsync -a --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
+            ComfyUI/ backend-staging/ComfyUI/
+          echo "ComfyUI copied ($(du -sh backend-staging/ComfyUI | cut -f1))"
+
+      - name: Create extra_model_paths.yaml
+        run: |
+          cat > backend-staging/extra_model_paths.yaml << 'YAML'
+          # ComfyUI External Model Paths - edit to point to your model directories
+          YAML
+
+      - name: Write version file
+        run: |
+          cat > backend-staging/version.txt << EOF
+          ${BACKEND_VERSION}
+          Built: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          Python: ${PYTHON_VERSION}
+          Git SHA: ${GITHUB_SHA}
+          EOF
+
+      - name: Clean up
+        run: |
+          find backend-staging -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          find backend-staging -name "*.pyc" -delete 2>/dev/null || true
+          du -sh backend-staging/*
+
+      - name: Create compressed archive
+        run: |
+          ARCHIVE="comfyui-backend-linux-x86_64.tar.gz"
+          tar czf "$ARCHIVE" -C backend-staging .
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+          ls -lh "$ARCHIVE"
+
+      - name: Calculate checksums
+        id: checksums
+        run: |
+          SHA256=$(sha256sum $ARCHIVE | awk '{print $1}')
+          SIZE=$(stat -c%s $ARCHIVE)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "## Archive" >> $GITHUB_STEP_SUMMARY
+          echo "- File: \`$ARCHIVE\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Size: $(numfmt --to=iec $SIZE)" >> $GITHUB_STEP_SUMMARY
+          echo "- SHA256: \`$SHA256\`" >> $GITHUB_STEP_SUMMARY
+        env:
+          ARCHIVE: ${{ env.ARCHIVE }}
+
+      - name: Verify archive integrity
+        run: |
+          mkdir -p verify-test
+          tar xzf $ARCHIVE -C verify-test
+          verify-test/venv/bin/python --version
+          [ -f verify-test/ComfyUI/main.py ] || { echo "main.py missing"; exit 1; }
+          echo "✅ Archive verified"
+        env:
+          ARCHIVE: ${{ env.ARCHIVE }}
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-archive-v${{ env.BACKEND_VERSION }}
+          path: ${{ env.ARCHIVE }}
+          retention-days: 90
+        env:
+          ARCHIVE: ${{ env.ARCHIVE }}
+
+      - name: Create GitHub Release
+        if: github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backend-v${{ env.BACKEND_VERSION }}
+          name: Backend v${{ env.BACKEND_VERSION }}
+          body: |
+            ## ComfyUI Desktop Backend v${{ env.BACKEND_VERSION }}
+
+            - **Python:** ${{ env.PYTHON_VERSION }}
+            - **SHA256:** `${{ steps.checksums.outputs.sha256 }}`
+            - **Size:** ${{ steps.checksums.outputs.size }} bytes
+
+            ### Verification
+            ```bash
+            sha256sum comfyui-backend-linux-x86_64.tar.gz
+            # Expected: ${{ steps.checksums.outputs.sha256 }}
+            ```
+          files: ${{ env.ARCHIVE }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Next steps
+        run: |
+          echo "Update downloader.rs with:"
+          echo "  expected_sha256: Some(\"${{ steps.checksums.outputs.sha256 }}\".to_string())"

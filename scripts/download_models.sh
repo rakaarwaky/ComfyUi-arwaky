@@ -1,8 +1,8 @@
 #!/bin/bash
 # Script to download required models for cartoon_to_realistic_sdxl_api2_shot_01 workflow
 
-CHECKPOINT_DIR="/home/raka/SharedData/Models/checkpoints"
-CONTROLNET_DIR="/home/raka/SharedData/Models/controlnet"
+CHECKPOINT_DIR="$HOME/SharedData/Models/checkpoints"
+CONTROLNET_DIR="$HOME/SharedData/Models/controlnet"
 
 mkdir -p "$CHECKPOINT_DIR"
 mkdir -p "$CONTROLNET_DIR"
