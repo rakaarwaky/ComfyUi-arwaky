@@ -54,11 +54,11 @@ fn read_app_config(app_handle: &tauri::AppHandle) -> AppConfig {
         None
     };
 
-    if let Some(config) = check_path(&std::path::Path::new("config.yaml")) {
+    if let Some(config) = check_path(std::path::Path::new("config.yaml")) {
         return config;
     }
 
-    if let Some(config) = check_path(&std::path::Path::new("../config.yaml")) {
+    if let Some(config) = check_path(std::path::Path::new("../config.yaml")) {
         return config;
     }
 
