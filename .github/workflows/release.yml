@@ -79,19 +79,19 @@ jobs:
             -exec ls -lh {} \;
 
       - name: Upload AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appimage-${{ matrix.target }}
           path: src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
 
       - name: Upload RPM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpm-${{ matrix.target }}
           path: src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
 
       - name: Upload DEB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deb-${{ matrix.target }}
           path: src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb

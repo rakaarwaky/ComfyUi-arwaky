@@ -129,7 +129,7 @@ jobs:
           ARCHIVE: ${{ env.ARCHIVE }}
 
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-archive-v${{ env.BACKEND_VERSION }}
           path: ${{ env.ARCHIVE }}
