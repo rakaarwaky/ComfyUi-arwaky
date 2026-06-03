@@ -139,7 +139,7 @@ jobs:
 
       - name: Create GitHub Release
         if: github.event.inputs.create_release == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: backend-v${{ env.BACKEND_VERSION }}
           name: Backend v${{ env.BACKEND_VERSION }}
