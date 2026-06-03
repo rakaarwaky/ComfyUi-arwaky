@@ -31,7 +31,8 @@
             "main"
           ],
           "permissions": [
-            "core:default"
+            "core:default",
+            "core:app:default"
           ]
         }
       ]
