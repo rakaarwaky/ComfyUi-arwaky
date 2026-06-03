@@ -55,8 +55,8 @@ To compile and build ComfyUI Desktop, ensure you have the following installed on
 
 1. **Clone the repository recursively** to automatically download the ComfyUI source code sub-module:
    ```bash
-   git clone --recurse-submodules https://github.com/arwaky/comfyui-desktop.git
-   cd comfyui-desktop
+   git clone --recurse-submodules https://github.com/rakaarwaky/ComfyUi-arwaky.git
+   cd ComfyUi-arwaky
    ```
 
 2. **Configure the Python Environment**:
@@ -210,7 +210,7 @@ We manage project versions systematically using custom scripts. If you are prepa
 
 ## Reporting Issues
 
-* Use the [GitHub Bug Report Template](https://github.com/arwaky/comfyui-desktop/issues/new?template=bug_report.md) for filing bugs.
+* Use the [GitHub Bug Report Template](https://github.com/rakaarwaky/ComfyUi-arwaky/issues/new?template=bug_report.md) for filing bugs.
 * Describe your system setup clearly (OS version, GPU model, ROCm version).
 * Copy and paste relevant logs by using the "Copy Logs" utility inside the application UI.
 

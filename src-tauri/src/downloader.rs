@@ -487,6 +487,11 @@ impl BackendInstaller {
     }
 }
 
+#[allow(dead_code)]
+pub fn resolve_path(base: &Path, relative: &Path) -> PathBuf {
+    normalize_path(&base.join(relative))
+}
+
 pub fn default_install_dir() -> Option<PathBuf> {
     std::env::var("HOME").ok().map(|home| {
         PathBuf::from(home).join(".local/share/comfyui-desktop")
@@ -495,7 +500,7 @@ pub fn default_install_dir() -> Option<PathBuf> {
 
 pub fn backend_download_url() -> String {
     format!(
-        "https://github.com/arwaky/comfyui-desktop/releases/download/backend-v{}/{}",
+        "https://github.com/rakaarwaky/ComfyUi-arwaky/releases/download/backend-v{}/{}",
         BACKEND_VERSION,
         BACKEND_ARCHIVE_NAME
     )
@@ -585,6 +590,29 @@ mod tests {
         assert!(validate_symlink_target(target, base).is_ok());
     }
 
+    // --- resolve_path ---
+
+    #[test]
+    fn test_resolve_path_normal() {
+        let base = Path::new("/a/b");
+        let relative = Path::new("c/d");
+        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/b/c/d"));
+    }
+
+    #[test]
+    fn test_resolve_path_dot() {
+        let base = Path::new("/a");
+        let relative = Path::new("./b");
+        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/b"));
+    }
+
+    #[test]
+    fn test_resolve_path_double_dot() {
+        let base = Path::new("/a/b");
+        let relative = Path::new("../c");
+        assert_eq!(resolve_path(base, relative), PathBuf::from("/a/c"));
+    }
+
     // --- utilities ---
 
     #[test]
@@ -600,7 +628,7 @@ mod tests {
     #[test]
     fn test_backend_download_url_format() {
         let url = backend_download_url();
-        assert!(url.contains("github.com/arwaky"));
+        assert!(url.contains("github.com/rakaarwaky"));
         assert!(url.contains(BACKEND_ARCHIVE_NAME));
         assert!(url.contains(BACKEND_VERSION));
     }

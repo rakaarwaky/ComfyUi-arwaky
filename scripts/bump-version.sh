@@ -108,7 +108,7 @@ fi
 # 4. Git tag (optional)
 if $TAG; then
   echo "Creating git tag v$NEW_VER..."
-  git add src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+  git add src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json src-tauri/tauri.conf.json
   if [[ -n "$BACKEND" ]]; then
     git add src-tauri/src/downloader.rs
   fi
@@ -119,3 +119,4 @@ fi
 
 echo ""
 echo "Done! App version: $NEW_VER${BACKEND:+ (backend: $BACKEND)}"
+exit 0

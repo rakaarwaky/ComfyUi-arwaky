@@ -1,8 +1,10 @@
-# ComfyUI Desktop
+# ComfyUi-arwaky
 
-A modern, high-performance desktop application shell for [ComfyUI](https://github.com/Comfy-Org/ComfyUI) built using **Tauri v2** and **Rust**. It automatically provisions the ComfyUI Python backend, performs smart AMD ROCm GPU detection, routes logs via a bounded MPSC channel, and hosts the native ComfyUI web UI inside a hardware-accelerated desktop webview.
+A customized, high-performance desktop application shell for [ComfyUI](https://github.com/Comfy-Org/ComfyUI) built using **Tauri v2** and **Rust**. This **ComfyUi-arwaky** build (developed by `rakaarwaky`) is specifically tailored to provide a seamless, optimized desktop experience on Linux with out-of-the-box support for AMD ROCm GPU acceleration. 
 
-[![CI](https://github.com/arwaky/comfyui-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/arwaky/comfyui-desktop/actions/workflows/ci.yml)
+Unlike generic wrappers, **ComfyUi-arwaky** integrates automated AMD microarchitecture detection, environment tuning, process group lifecycle management, and a bounded logging pipeline designed to eliminate standard desktop setup hassles for Radeon GPU users.
+
+[![CI](https://github.com/rakaarwaky/ComfyUi-arwaky/actions/workflows/ci.yml/badge.svg)](https://github.com/rakaarwaky/ComfyUi-arwaky/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-blue)](https://v2.tauri.app/)
 [![ROCm](https://img.shields.io/badge/ROCm-7.2.4-orange)](https://rocm.docs.amd.com/)
@@ -109,8 +111,8 @@ bash scripts/install_local.sh
 
 1. **Clone the repository recursively** to download the ComfyUI submodule:
    ```bash
-   git clone --recurse-submodules https://github.com/arwaky/comfyui-desktop.git
-   cd comfyui-desktop
+   git clone --recurse-submodules https://github.com/rakaarwaky/ComfyUi-arwaky.git
+   cd ComfyUi-arwaky
    ```
 
 2. **Configure the Python Virtual Environment** and install ROCm-compatible dependencies:

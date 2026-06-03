@@ -674,14 +674,14 @@ pub fn run() {
                 continue;
               }
 
-              let (formatted, is_stderr) = match msg {
+              let (formatted, _is_stderr) = match msg {
                 LogMessage::Stdout(ref line) => (format!("[stdout] {}", line), false),
                 LogMessage::Stderr(ref line) => (format!("[stderr] {}", line), true),
                 LogMessage::Launcher(ref line) => (format!("[Launcher] {}", line), false),
               };
 
               #[cfg(debug_assertions)]
-              if is_stderr {
+              if _is_stderr {
                 eprintln!("{}", formatted);
               } else {
                 println!("{}", formatted);
