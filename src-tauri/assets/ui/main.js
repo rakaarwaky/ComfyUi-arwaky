@@ -1,6 +1,7 @@
 // Local imports (no CDN dependency, enables offline mode)
 import { invoke } from './tauri-api/core.js';
 import { listen } from './tauri-api/event.js';
+import { getVersion } from './tauri-api/app.js';
 
 // Set up window.__TAURI__ for backward compatibility
 window.__TAURI__ = {
@@ -21,6 +22,7 @@ const btnToggle = document.getElementById("btn-toggle");
 const downloadActions = document.getElementById("download-actions");
 const btnCancel = document.getElementById("btn-cancel");
 const btnRetry = document.getElementById("btn-retry");
+const appVersionLabel = document.getElementById("app-version-label");
 
 let isFailed = false;
 let isDownloading = false;
@@ -255,6 +257,13 @@ if (window.__TAURI__) {
   }
 } else {
   appendLogLine("[Dev Mode] Running outside Tauri webview container.", "system");
+}
+
+// Fetch version and check status
+if (window.__TAURI__) {
+  getVersion().then(version => {
+    if (appVersionLabel) appVersionLabel.textContent = `v${version}`;
+  }).catch(err => console.error("Failed to get version:", err));
 }
 
 // Initial check

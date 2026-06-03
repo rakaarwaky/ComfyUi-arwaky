@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.2.2"
+version = "0.3.0"
 description = "A Tauri App"
 authors = ["you"]
 license = ""
@@ -29,6 +29,7 @@ flate2 = "1"
 tar = "0.4"
 sha2 = "0.11"
 hex = "0.4"
+serde_yaml = "0.9"
 
 [profile.release]
 lto = false

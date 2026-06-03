@@ -146,6 +146,15 @@ body {
     opacity: 0.8;
 }
 
+.app-version-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 6px;
+    letter-spacing: 1px;
+    opacity: 0.9;
+}
+
 /* Spinner */
 .spinner-container {
     position: relative;

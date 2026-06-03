@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to download and upgrade models for ComfyUI Desktop
-# Tailored for local ROCm AMD environments with 16GB VRAM (e.g. RX 6800 XT)
+# Features: Link validation pre-checking, smart existence checking (skip if present), and size-based download prioritization.
 
 # Base directory for model storage (user-specific, matches extra_model_paths.yaml)
 BASE_DIR="$HOME/SharedData/Models"
@@ -21,87 +21,71 @@ echo -e "${CYAN}${BOLD}          ComfyUI-Desktop Ultimate Model Downloader & Upg
 echo -e "${CYAN}${BOLD}========================================================================${NC}"
 echo -e "Target Directory: ${BLUE}${BASE_DIR}${NC}\n"
 
-# Helper function to download files securely and resume interrupted downloads
-download_file() {
-  local category="$1"
-  local url="$2"
-  local dest_file="$3"
-  local full_dest_dir="$BASE_DIR/$category"
-  local full_dest_path="$full_dest_dir/$dest_file"
+# Master list of models: Category | Destination filename | URL | Size in bytes (for sorting) | Group
+MODELS=(
+  "configs|sd_xl_base.yaml|https://raw.githubusercontent.com/Stability-AI/generative-models/main/configs/inference/sd_xl_base.yaml|3000|sdxl"
+  "embeddings|easynegative.safetensors|https://huggingface.co/datasets/gsdf/EasyNegative/resolve/main/EasyNegative.safetensors|24000|other"
+  "vae_approx|taesdxl_decoder.pth|https://github.com/madebyollin/taesd/raw/main/taesdxl_decoder.pth|1100000|other"
+  "detection|yolov8-dfa-face.pt|https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt|6500000|other"
+  "upscale_models|RealESRGAN_x4plus_anime_6B.pth|https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth|18000000|other"
+  "latent_upscale_models|latent-upscaler-v2.1_SDxl-x1.5.safetensors|https://huggingface.co/city96/SD-Latent-Upscaler/resolve/main/latent-upscaler-v2.1_SDxl-x1.5.safetensors|7400000|other"
+  "upscale_models|4x-UltraSharp.pth|https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth|67000000|other"
+  "optical_flow|raft_large_C_T_V2-1bb1363a.pth|https://download.pytorch.org/models/raft_large_C_T_V2-1bb1363a.pth|85000000|video"
+  "model_patches|resadapter_v1_sdxl_extralora.safetensors|https://huggingface.co/jiaxiangc/res-adapter/resolve/main/resadapter_v1_sdxl_extrapolation/pytorch_lora_weights.safetensors|1844672|sdxl"
+  "frame_interpolation|film_net_fp32.pt|https://huggingface.co/nguu/film-pytorch/resolve/main/film_net_fp32.pt|156000000|video"
+  "vae|ae.safetensors|https://huggingface.co/diffusers/FLUX.1-vae/resolve/main/diffusion_pytorch_model.safetensors|167666902|flux"
+  "background_removal|ben2.onnx|https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx|190000000|video"
+  "loras|flux_realism_detailer.safetensors|https://huggingface.co/fal/Realism-Detailer-Kontext-Dev-LoRA/resolve/main/high_detail.safetensors|613109224|flux"
+  "clip|clip_l.safetensors|https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors|240000000|flux"
+  "vae|sdxl_vae.safetensors|https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors|335000000|sdxl"
+  "style_models|ip-adapter_sdxl.safetensors|https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors|1100000000|sdxl"
+  "audio_encoders|laion_clap_music.pt|https://huggingface.co/lukewys/laion_clap/resolve/main/music_audioset_epoch_15_esc_90.14.pt|1200000000|other"
+  "photomaker|photomaker-v2.bin|https://huggingface.co/TencentARC/PhotoMaker-V2/resolve/main/photomaker-v2.bin|1200000000|other"
+  "geometry_estimation|depth_anything_v3_vitl.pth|https://huggingface.co/depth-anything/DA3-LARGE/resolve/main/model.safetensors|1400000000|video"
+  "animatediff_models|mm_sdxl_v10_beta.ckpt|https://huggingface.co/guoyww/AnimateDiff/resolve/main/mm_sdxl_v10_beta.ckpt|1600000000|video"
+  "controlnet|flux1-dev-controlnet-union.safetensors|https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro/resolve/main/diffusion_pytorch_model.safetensors|3400000000|flux"
+  "gligen|gligen_sd14_textbox_pruned.safetensors|https://huggingface.co/comfyanonymous/GLIGEN_pruned_safetensors/resolve/main/gligen_sd14_textbox_pruned.safetensors|836445074|other"
+  "clip_vision|clip_vision_g.safetensors|https://huggingface.co/comfyanonymous/clip_vision_g/resolve/main/clip_vision_g.safetensors|3700000000|sdxl"
+  "clip_vision|clip_vision_h.safetensors|https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors|3700000000|sdxl"
+  "text_encoders|t5xxl_fp8_e4m3fn.safetensors|https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors|4900000000|flux"
+  "checkpoints|sdxl_lightning_8step.safetensors|https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_8step.safetensors|6600000000|sdxl"
+  "checkpoints|Juggernaut-XL-Ragnarok.safetensors|https://huggingface.co/Drnerdy81/juggernaut-xl-ragnarok/resolve/main/juggernautXL_ragnarokBy.safetensors|6600000000|sdxl"
+  "diffusion_models|flux1-dev-Q5_K_S.gguf|https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_S.gguf|8285267232|flux"
+  "diffusion_models|flux1-schnell-Q8_0.gguf|https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q8_0.gguf|10000000000|flux"
+  "diffusers|stable-diffusion-xl-base-1.0|https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0|12000000000|other"
+)
 
-  mkdir -p "$full_dest_dir"
+# Helper function to check URL validity before downloading
+check_links() {
+  echo -e "${CYAN}${BOLD}>>> Step 1: Checking URL validity for ALL master list models... <<<${NC}"
+  local has_error=false
 
-  echo -e "\n${YELLOW}${BOLD}=== Downloading [$category] $dest_file ===${NC}"
-  if [ -f "$full_dest_path" ]; then
-    echo -e "${BLUE}File already exists. Checking for resume or skipping...${NC}"
-  fi
+  # Sort by size (smallest first)
+  local sorted_models
+  sorted_models=$(printf "%s\n" "${MODELS[@]}" | sort -t'|' -k4 -n)
 
-  wget -c --show-progress "$url" -O "$full_dest_path"
-  
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ Successfully downloaded/verified $dest_file${NC}"
+  while IFS='|' read -r category dest_file url size group; do
+    echo -ne "Checking: ${BLUE}$dest_file${NC}... "
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" -I -L "$url")
+
+    if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 302 ] || [ "$http_code" -eq 301 ]; then
+      echo -e "${GREEN}✓ Valid [HTTP $http_code]${NC}"
+    else
+      echo -e "${RED}✗ Error [HTTP $http_code]${NC} ($url)"
+      has_error=true
+    fi
+  done <<< "$sorted_models"
+
+  if $has_error; then
+    echo -e "\n${RED}${BOLD}ERROR: One or more download URLs are invalid. Aborting script.${NC}"
+    exit 1
   else
-    echo -e "${RED}✗ Failed to download $dest_file from $url${NC}"
+    echo -e "${GREEN}${BOLD}✓ All links are valid! Proceeding to downloading...${NC}\n"
   fi
 }
 
-# 1. audio_encoders
-download_audio_encoders() {
-  download_file "audio_encoders" \
-    "https://huggingface.co/lukewys/laion_clap/resolve/main/music_audioset_epoch_15_esc_90.14.pt" \
-    "laion_clap_music.pt"
-}
-
-# 2. background_removal
-download_background_removal() {
-  download_file "background_removal" \
-    "https://huggingface.co/PramaLLC/BEN2/resolve/main/ben2.onnx" \
-    "ben2.onnx"
-}
-
-# 3. checkpoints
-download_checkpoints() {
-  download_file "checkpoints" \
-    "https://huggingface.co/Drnerdy81/juggernaut-xl-ragnarok/resolve/main/Juggernaut-XL-Ragnarok.safetensors" \
-    "Juggernaut-XL-Ragnarok.safetensors"
-}
-
-# 4. clip
-download_clip() {
-  download_file "clip" \
-    "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors" \
-    "clip_l.safetensors"
-}
-
-# 5. clip_vision
-download_clip_vision() {
-  download_file "clip_vision" \
-    "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors" \
-    "clip_vision_h.safetensors"
-}
-
-# 6. configs
-download_configs() {
-  download_file "configs" \
-    "https://raw.githubusercontent.com/Stability-AI/generative-models/main/configs/inference/sd_xl_base.yaml" \
-    "sd_xl_base.yaml"
-}
-
-# 7. controlnet
-download_controlnet() {
-  download_file "controlnet" \
-    "https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro/resolve/main/diffusion_pytorch_model.safetensors" \
-    "flux1-dev-controlnet-union.safetensors"
-}
-
-# 8. detection
-download_detection() {
-  download_file "detection" \
-    "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt" \
-    "yolov8-dfa-face.pt"
-}
-
-# 9. diffusers
+# Helper function to download folder structure for diffusers
 download_diffusers() {
   local diffusers_dir="$BASE_DIR/diffusers/stable-diffusion-xl-base-1.0"
   echo -e "\n${YELLOW}${BOLD}=== Downloading [diffusers] stable-diffusion-xl-base-1.0 ===${NC}"
@@ -133,236 +117,114 @@ download_diffusers() {
     )
     for file in "${files[@]}"; do
       mkdir -p "$(dirname "$diffusers_dir/$file")"
+      if [ -f "$diffusers_dir/$file" ] && [ -s "$diffusers_dir/$file" ]; then
+        echo -e "${GREEN}✓ File already exists: stable-diffusion-xl-base-1.0/$file. Skipping.${NC}"
+        continue
+      fi
       wget -c --show-progress "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/$file" -O "$diffusers_dir/$file"
     done
   fi
-  echo -e "${GREEN}✓ Diffusers structure downloaded!${NC}"
 }
 
-# 10. diffusion_models
-download_diffusion_models() {
-  download_file "diffusion_models" \
-    "https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_M.gguf" \
-    "flux1-dev-Q5_K_M.gguf"
-}
+# Master download execution group
+download_group() {
+  local filter_group="$1"
+  
+  # Step 1: Pre-check link validity
+  check_links "$filter_group"
 
-# 11. embeddings
-download_embeddings() {
-  download_file "embeddings" \
-    "https://huggingface.co/datasets/gsdf/EasyNegative/resolve/main/EasyNegative.safetensors" \
-    "easynegative.safetensors"
-}
+  # Step 2: Download files (sorted by size - smallest first)
+  echo -e "${CYAN}${BOLD}>>> Step 2: Downloading files prioritized by size (smallest first) <<<${NC}"
+  
+  local sorted_models
+  sorted_models=$(printf "%s\n" "${MODELS[@]}" | sort -t'|' -k4 -n)
 
-# 12. frame_interpolation
-download_frame_interpolation() {
-  download_file "frame_interpolation" \
-    "https://huggingface.co/nguu/film-pytorch/resolve/main/film_net_fp32.pt" \
-    "film_net_fp32.pt"
-}
+  while IFS='|' read -r category dest_file url size group; do
+    if [ -n "$filter_group" ] && [ "$group" != "$filter_group" ]; then
+      continue
+    fi
 
-# 13. geometry_estimation
-download_geometry_estimation() {
-  download_file "geometry_estimation" \
-    "https://huggingface.co/depth-anything/DA3-LARGE/resolve/main/pytorch_model.bin" \
-    "depth_anything_v3_vitl.pth"
-}
+    local full_dest_dir="$BASE_DIR/$category"
+    local full_dest_path="$full_dest_dir/$dest_file"
 
-# 14. gligen
-download_gligen() {
-  download_file "gligen" \
-    "https://huggingface.co/comfyanonymous/GLIGEN_textbox_model/resolve/main/gligen_sd15_textbox_pruned.safetensors" \
-    "gligen_sd15_textbox_pruned.safetensors"
-}
+    # Specific logic for folder-based downloads like diffusers
+    if [ "$category" == "diffusers" ]; then
+      if [ -d "$full_dest_path" ] && [ "$(ls -A "$full_dest_path" 2>/dev/null)" ]; then
+        echo -e "${GREEN}✓ Folder already exists: diffusers/$dest_file. Skipping.${NC}"
+        continue
+      fi
+      download_diffusers
+      continue
+    fi
 
-# 15. hypernetworks
-download_hypernetworks() {
-  echo -e "${YELLOW}Hypernetwork 'sd15_wavenet_style.pt' is optional and deprecated by LoRAs. Skipping...${NC}"
-}
+    # Check if file exists and is not empty (Skip if present)
+    if [ -f "$full_dest_path" ] && [ -s "$full_dest_path" ]; then
+      echo -e "${GREEN}✓ File already exists: $category/$dest_file. Skipping download.${NC}"
+      continue
+    fi
 
-# 16. latent_upscale
-download_latent_upscale() {
-  # ComfyUI maps this to latent_upscale_models
-  download_file "latent_upscale_models" \
-    "https://huggingface.co/city96/latent-resizer/resolve/main/latent_resizer.pt" \
-    "latent_resizer.pt"
-}
-
-# 17. loras
-download_loras() {
-  download_file "loras" \
-    "https://huggingface.co/fal/Realism-Detailer-Kontext-Dev-LoRA/resolve/main/pytorch_model_lora.safetensors" \
-    "flux_realism_detailer.safetensors"
-}
-
-# 18. model_patches
-download_model_patches() {
-  download_file "model_patches" \
-    "https://huggingface.co/jiaxiangc/ResAdapter/resolve/main/resadapter_v1_sdxl_extralora.safetensors" \
-    "resadapter_v1_sdxl_extralora.safetensors"
-}
-
-# 19. optical_flow
-download_optical_flow() {
-  download_file "optical_flow" \
-    "https://download.pytorch.org/models/raft_large_C_T_V2-10a1125c.pth" \
-    "raft_large_C_T_V2-10a1125c.pth"
-}
-
-# 20. photomaker
-download_photomaker() {
-  download_file "photomaker" \
-    "https://huggingface.co/TencentARC/PhotoMaker-V2/resolve/main/photomaker-v2.bin" \
-    "photomaker-v2.bin"
-}
-
-# 21. style_models
-download_style_models() {
-  download_file "style_models" \
-    "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors" \
-    "ip-adapter_sdxl.safetensors"
-}
-
-# 22. text_encoders
-download_text_encoders() {
-  download_file "text_encoders" \
-    "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors" \
-    "t5xxl_fp8_e4m3fn.safetensors"
-}
-
-# 24. upscale_models
-download_upscale_models() {
-  download_file "upscale_models" \
-    "https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth" \
-    "4x-UltraSharp.pth"
-}
-
-# 25. vae
-download_vae() {
-  download_file "vae" \
-    "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors" \
-    "sdxl_vae.safetensors"
-  download_file "vae" \
-    "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/ae.safetensors" \
-    "ae.safetensors"
-}
-
-# 26. vae_approx
-download_vae_approx() {
-  download_file "vae_approx" \
-    "https://huggingface.co/madebyollin/taesdxl/resolve/main/taesdxl.pth" \
-    "taesdxl.pth"
-}
-
-download_flux_group() {
-  echo -e "\n${MAGENTA}${BOLD}>>> Starting FLUX Essentials Download Group (~18 GB total)...<<<${NC}"
-  download_clip
-  download_text_encoders
-  download_diffusion_models
-  download_vae
-  download_controlnet
-  download_loras
-}
-
-download_sdxl_group() {
-  echo -e "\n${BLUE}${BOLD}>>> Starting SDXL Essentials Download Group (~23 GB total)...<<<${NC}"
-  download_checkpoints
-  download_vae
-  download_clip_vision
-  download_style_models
-  download_model_patches
-  download_configs
-}
-
-download_video_group() {
-  echo -e "\n${CYAN}${BOLD}>>> Starting Video & Animation Group (~2 GB total)...<<<${NC}"
-  download_background_removal
-  download_frame_interpolation
-  download_optical_flow
-  download_geometry_estimation
-}
-
-download_all() {
-  echo -e "\n${RED}${BOLD}>>> WARNING: Starting download of ALL models (~45 GB+ total). Ensure you have enough disk space and bandwidth! <<<${NC}"
-  download_audio_encoders
-  download_background_removal
-  download_checkpoints
-  download_clip
-  download_clip_vision
-  download_configs
-  download_controlnet
-  download_detection
-  download_diffusers
-  download_diffusion_models
-  download_embeddings
-  download_frame_interpolation
-  download_geometry_estimation
-  download_gligen
-  download_latent_resizer
-  download_loras
-  download_model_patches
-  download_optical_flow
-  download_photomaker
-  download_style_models
-  download_text_encoders
-  download_upscale_models
-  download_vae
-  download_vae_approx
+    # Download file using wget
+    mkdir -p "$full_dest_dir"
+    echo -e "\n${YELLOW}${BOLD}=== Downloading [$category] $dest_file (~$(numfmt --to=iec-binary --suffix=B "$size")) ===${NC}"
+    wget -c --show-progress "$url" -O "$full_dest_path"
+    
+    if [ $? -eq 0 ]; then
+      echo -e "${GREEN}✓ Successfully downloaded/verified $dest_file${NC}"
+    else
+      echo -e "${RED}✗ Failed to download $dest_file${NC}"
+    fi
+  done <<< "$sorted_models"
 }
 
 # Parse Command-Line Flags
 if [ "$1" == "--all" ]; then
-  download_all
+  download_group ""
   exit 0
 elif [ "$1" == "--flux" ]; then
-  download_flux_group
+  download_group "flux"
   exit 0
 elif [ "$1" == "--sdxl" ]; then
-  download_sdxl_group
+  download_group "sdxl"
   exit 0
 elif [ "$1" == "--video" ]; then
-  download_video_group
+  download_group "video"
+  exit 0
+elif [ "$1" == "--check" ]; then
+  check_links
   exit 0
 fi
 
 # Interactive Menu
 while true; do
   echo -e "${CYAN}${BOLD}Choose a download option:${NC}"
-  echo -e "1) ${MAGENTA}${BOLD}FLUX Essentials${NC} (FLUX Dev Q5, T5-XXL FP8, Clip-L, VAE, Union ControlNet, Realism LoRA)"
-  echo -e "2) ${BLUE}${BOLD}SDXL Essentials${NC} (Juggernaut XL Ragnarok, VAE, IP-Adapter, Model Patches)"
-  echo -e "3) ${CYAN}${BOLD}Video / Animation Tools${NC} (Depth Anything V3, FILM, RAFT Flow, BEN2 Seg)"
-  echo -e "4) ${YELLOW}All Other Models${NC} (EasyNegative, Audio CLAP, PhotoMaker V2, GLIGEN, Latent Resizer, etc.)"
-  echo -e "5) ${RED}${BOLD}Download ALL Models${NC} (~45+ GB)"
+  echo -e "1) ${MAGENTA}${BOLD}FLUX Essentials${NC} (~28.5 GB) (FLUX Dev Q5, Schnell Q8, T5-XXL FP8, Clip-L, VAE, Union ControlNet, Realism LoRA)"
+  echo -e "2) ${BLUE}${BOLD}SDXL Essentials${NC} (~22 GB) (Juggernaut XL Ragnarok, SDXL Lightning, VAE, IP-Adapter + Clip Vision G/H, Model Patches)"
+  echo -e "3) ${CYAN}${BOLD}Video / Animation Tools${NC} (~3.4 GB) (Depth Anything V3, FILM, AnimateDiff SDXL, RAFT Flow, BEN2 Seg)"
+  echo -e "4) ${YELLOW}All Other Models${NC} (~18 GB) (EasyNegative, Audio CLAP, PhotoMaker V2, GLIGEN, RealESRGAN Anime, Latent Resizer, etc.)"
+  echo -e "5) ${RED}${BOLD}Download ALL Models${NC} (~72 GB)"
   echo -e "6) Exit"
   echo -ne "${BOLD}Enter your choice (1-6): ${NC}"
   read choice
 
   case $choice in
     1)
-      download_flux_group
+      download_group "flux"
       break
       ;;
     2)
-      download_sdxl_group
+      download_group "sdxl"
       break
       ;;
     3)
-      download_video_group
+      download_group "video"
       break
       ;;
     4)
-      download_audio_encoders
-      download_detection
-      download_diffusers
-      download_embeddings
-      download_gligen
-      download_latent_resizer
-      download_photomaker
-      download_upscale_models
-      download_vae_approx
+      download_group "other"
       break
       ;;
     5)
-      download_all
+      download_group ""
       break
       ;;
     6)

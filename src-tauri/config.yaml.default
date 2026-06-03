@@ -1,0 +1,19 @@
+# ComfyUI Desktop - User Configuration
+# Copy this file to ~/.config/comfyui-desktop/config.yaml
+# or adjust paths before building from source.
+#
+# Jika diisi dan path-nya valid, aplikasi akan:
+#   - Skip download backend (gunakan venv & ComfyUI yang sudah ada)
+#   - Skip download model (gunakan extra_model_paths yang sudah ada)
+
+# Path ke python binary di virtual environment
+# Contoh: "/home/user/App/ComfyUi-arwaky/venv/bin/python"
+# python_path: ""
+
+# Path ke direktori ComfyUI
+# Contoh: "/home/user/App/ComfyUi-arwaky/ComfyUI"
+# comfyui_dir: ""
+
+# Path ke file extra_model_paths.yaml (opsional)
+# Contoh: "/home/user/App/ComfyUi-arwaky/extra_model_paths.yaml"
+# extra_model_paths: ""
