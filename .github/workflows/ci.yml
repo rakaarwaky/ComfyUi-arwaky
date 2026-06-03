@@ -14,6 +14,9 @@ jobs:
   rust-checks:
     name: Rust Checks
     runs-on: ubuntu-24.04
+    container:
+      image: fedora:44
+      options: --user root
     defaults:
       run:
         working-directory: src-tauri
@@ -25,17 +28,10 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            build-essential \
-            libxdo-dev \
-            libssl-dev \
-            # libayatana-appindicator3-dev conflicts with libappindicator3-dev
+          dnf install -y \
+            webkit2gtk4.1-devel gtk3-devel libappindicator-gtk3-devel \
+            librsvg2-devel patchelf openssl-devel \
+            git gcc gcc-c++ make pkgconf-pkg-config
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -71,11 +67,14 @@ jobs:
   shell-checks:
     name: Shell Script Lint
     runs-on: ubuntu-24.04
+    container:
+      image: fedora:44
+      options: --user root
     steps:
       - uses: actions/checkout@v6
 
       - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
+        run: dnf install -y shellcheck
 
       - name: Run shellcheck
         run: |
@@ -84,26 +83,29 @@ jobs:
   config-validation:
     name: Validate Config Files
     runs-on: ubuntu-24.04
+    container:
+      image: fedora:44
+      options: --user root
     steps:
       - uses: actions/checkout@v6
 
       - name: Install jq
-        run: sudo apt-get install -y jq
+        run: dnf install -y jq
 
       - name: Validate tauri.conf.json
-        run: jq empty src-tauri/tauri.conf.json && echo "✅ Valid"
+        run: jq empty src-tauri/tauri.conf.json && echo "Valid"
 
       - name: Validate Cargo.toml
         run: |
           cd src-tauri
-          cargo metadata --format-version=1 > /dev/null && echo "✅ Valid"
+          cargo metadata --format-version=1 > /dev/null && echo "Valid"
 
       - name: Check required files
         run: |
           for file in README.md LICENSE CONTRIBUTING.md \
             src-tauri/Cargo.toml src-tauri/tauri.conf.json \
             src-tauri/src/main.rs src-tauri/src/lib.rs src-tauri/src/downloader.rs; do
-            [ -f "$file" ] && echo "✅ $file" || { echo "❌ $file"; exit 1; }
+            [ -f "$file" ] && echo "OK $file" || { echo "MISSING $file"; exit 1; }
           done
 
   security-audit:

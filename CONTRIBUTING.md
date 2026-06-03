@@ -30,17 +30,7 @@ To compile and build ComfyUI Desktop, ensure you have the following installed on
 * **Rust Toolchain**: version `1.77+` (via [rustup](https://rustup.rs/))
 * **Node.js Runtime**: version `18+` (used for Tauri CLI commands)
 * **Python Runtime**: version `3.12`
-* **System Libraries** (for Debian/Ubuntu based systems):
-  ```bash
-  sudo apt-get install -y \
-    libwebkit2gtk-4.1-dev \
-    libgtk-3-dev \
-    libappindicator3-dev \
-    librsvg2-dev \
-    patchelf \
-    shellcheck
-  ```
-* **System Libraries** (for Fedora based systems):
+* **System Libraries** (Fedora):
   ```bash
   sudo dnf install -y \
     webkit2gtk4.1-devel \

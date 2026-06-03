@@ -1,20 +1,106 @@
 # ==============================================================================
 # ComfyUI ROCm 7.2.4 Virtual Environment Requirements
 # ==============================================================================
-# CARA INSTALL:
-#   source venv/bin/activate
-#   pip install -r requirements.txt --extra-index-url https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/
+#
+# LANGKAH INSTALL:
+#   1. Install system libraries ROCm dulu (lihat bawah):
+#        sudo bash scripts/upgrade_rocm.sh
+#   2. Aktifkan venv & install pip packages:
+#        source venv/bin/activate
+#        pip install -r requirements.txt
+#
+# ==============================================================================
+# SYSTEM PREREQUISITES — Install via: sudo dnf install -y <package>
+# (Bukan pip package — harus diinstall di sistem sebelum pip install)
+# ==============================================================================
+#
+# ROCm Runtime (wajib):
+#   rocm-runtime
+#   hip-runtime-amd
+#   rocm-hip-runtime
+#   rocm-smi-lib
+#   rocminfo
+#
+# ROCm Math & Sparse Libraries (wajib untuk PyTorch ROCm):
+#   hipsparse          # libhipsparse.so.4  ← tanpa ini torch gagal load
+#   hipsparse7.2.4     # versioned alias
+#   rocsparse          # backend hipsparse
+#   rocsparse7.2.4
+#   rocblas            # BLAS untuk GPU
+#   rocblas7.2.4
+#   hipblas            # HIP BLAS wrapper
+#   hipblas7.2.4
+#   hipblaslt          # hipBLASLt (flash attention, transformer ops)
+#   hipblaslt7.2.4
+#   rocfft             # FFT ops
+#   rocfft7.2.4
+#   hipsolver          # Linear solver
+#   hipsolver7.2.4
+#
+# ROCm AI/Compute Libraries:
+#   miopen-hip         # DNN primitives (conv, BN, etc.)
+#   miopen-hip7.2.4
+#   rocm-dev           # Headers & build tools (opsional, untuk compile)
+#   comgr              # Code object manager
+#   comgr7.2.4
+#
+# One-liner install semua:
+#   sudo dnf install -y \
+#     hipsparse hipsparse7.2.4 \
+#     rocsparse rocsparse7.2.4 \
+#     rocblas rocblas7.2.4 \
+#     hipblas hipblas7.2.4 \
+#     hipblaslt hipblaslt7.2.4 \
+#     rocfft rocfft7.2.4 \
+#     hipsolver hipsolver7.2.4 \
+#     miopen-hip miopen-hip7.2.4 \
+#     rocm-runtime hip-runtime-amd rocm-hip-runtime \
+#     rocm-smi-lib rocminfo comgr comgr7.2.4
+#
+# Atau jalankan: sudo bash scripts/upgrade_rocm.sh
+#
 # ==============================================================================
 
-# Tambah repo Radeon sebagai index tambahan (untuk resolve triton ROCm)
 --extra-index-url https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/
 
 # 1. PyTorch ROCm 7.2.4 Wheels (Python 3.12, Linux x86_64)
-# triton ROCm diperlukan sebagai dependensi torch ROCm
 https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/triton-3.5.1%2Brocm7.2.4.gita272dfa8-cp312-cp312-linux_x86_64.whl
 https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torch-2.9.1%2Brocm7.2.4.lw.git39497456-cp312-cp312-linux_x86_64.whl
 https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torchvision-0.24.0%2Brocm7.2.4.gitb919bd0c-cp312-cp312-linux_x86_64.whl
 https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torchaudio-2.9.0%2Brocm7.2.4.gite3c6ee2b-cp312-cp312-linux_x86_64.whl
 
 # 2. ComfyUI Core Dependencies
--r ComfyUI/requirements.txt
+comfyui-frontend-package==1.44.19
+comfyui-workflow-templates==0.9.92
+comfyui-embedded-docs==0.5.2
+torchsde
+numpy>=1.25.0
+einops
+transformers>=4.50.3
+tokenizers>=0.13.3
+sentencepiece
+safetensors>=0.4.2
+aiohttp>=3.11.8
+yarl>=1.18.0
+pyyaml
+Pillow
+scipy
+tqdm
+psutil
+alembic
+SQLAlchemy>=2.0.0
+filelock
+av>=16.0.0
+comfy-kitchen==0.2.10
+comfy-aimdo==0.4.7
+requests
+simpleeval>=1.0.0
+blake3
+
+# 3. Non-essential Dependencies
+kornia>=0.7.1
+spandrel
+pydantic~=2.0
+pydantic-settings~=2.0
+PyOpenGL
+glfw

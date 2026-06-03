@@ -173,6 +173,6 @@ If you encounter an unresolved issue, please submit a bug report on GitHub:
 2. Click the **"Copy Logs"** button in the startup window. This copies the buffered memory logs (up to 2,000 lines) to your clipboard.
 3. Paste the contents into a file or directly into your bug report.
 4. When reporting, include:
-   - Your Linux Distribution and version (e.g. Fedora 44, Ubuntu 24.04).
+   - Your Fedora version (e.g. Fedora 44).
    - Your GPU Model (e.g., Radeon RX 6700 XT).
    - Your installed ROCm version (check with `rocm-smi`).

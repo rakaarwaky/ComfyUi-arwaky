@@ -40,11 +40,6 @@ if ls "$BUNDLE_DIR/rpm/"*.rpm 2>/dev/null; then
     echo "  ✅ RPM copied to dist/"
 fi
 
-# Copy DEB (Debian/Ubuntu installer)
-if ls "$BUNDLE_DIR/deb/"*.deb 2>/dev/null; then
-    cp "$BUNDLE_DIR/deb/"*.deb "$DIST_DIR/"
-    echo "  ✅ DEB copied to dist/"
-fi
 
 # Copy standard binary
 if [ -f "$ROOT_DIR/src-tauri/target/release/app" ]; then
@@ -56,7 +51,7 @@ fi
 echo ""
 echo "  Generating SHA256 checksums..."
 cd "$DIST_DIR"
-for file in *.AppImage *.rpm *.deb comfyui-desktop; do
+for file in *.AppImage *.rpm comfyui-desktop; do
     if [ -f "$file" ]; then
         sha256sum "$file" >> SHA256SUMS.txt
         echo "    ✅ $file checksum generated"

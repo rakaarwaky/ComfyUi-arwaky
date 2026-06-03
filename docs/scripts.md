@@ -124,7 +124,7 @@ Compiles the production-ready distribution packages.
   ```
 * **Outputs Created**:
   - **AppImage**: A single portable application executable.
-  - **RPM**: An installation package for Fedora / RedHat systems.
+  - **RPM**: An installation package for Fedora.
   All compiled artifacts are stored in the root `dist/` directory.
 
 ---

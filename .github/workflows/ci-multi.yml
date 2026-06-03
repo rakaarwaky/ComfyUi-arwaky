@@ -18,15 +18,17 @@ jobs:
   lint-test:
     name: Lint & Unit Tests
     runs-on: ubuntu-24.04
+    container:
+      image: fedora:44
+      options: --user root
     steps:
       - uses: actions/checkout@v6
 
       - name: Install system deps (for Tauri)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev \
-            librsvg2-dev patchelf libssl-dev jq shellcheck
+          dnf install -y \
+            webkit2gtk4.1-devel gtk3-devel libappindicator-gtk3-devel \
+            librsvg2-devel patchelf openssl-devel jq shellcheck
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -62,7 +64,7 @@ jobs:
         run: jq empty src-tauri/tauri.conf.json
 
   # ==========================================================================
-  # Stage 2: Build on multiple distros
+  # Stage 2: Build on Fedora distros
   # ==========================================================================
   build-matrix:
     name: Build on ${{ matrix.distro }}
@@ -74,24 +76,15 @@ jobs:
         include:
           - distro: fedora-40
             image: fedora:40
-            pkg_manager: dnf
           - distro: fedora-41
             image: fedora:41
-            pkg_manager: dnf
-          - distro: ubuntu-24.04
-            image: ubuntu:24.04
-            pkg_manager: apt
-          - distro: ubuntu-22.04
-            image: ubuntu:22.04
-            pkg_manager: apt
 
     container:
       image: ${{ matrix.image }}
       options: --user root
 
     steps:
-      - name: Install system deps (Fedora)
-        if: matrix.pkg_manager == 'dnf'
+      - name: Install system deps
         run: |
           dnf install -y \
             webkit2gtk4.1-devel gtk3-devel libappindicator-gtk3-devel \
@@ -99,17 +92,6 @@ jobs:
             git curl wget tar gzip which findutils \
             gcc gcc-c++ make pkgconf-pkg-config \
             rpm-build jq
-
-      - name: Install system deps (Ubuntu)
-        if: matrix.pkg_manager == 'apt'
-        run: |
-          apt-get update
-          apt-get install -y \
-            libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev \
-            librsvg2-dev patchelf libssl-dev \
-            git curl wget ca-certificates \
-            build-essential pkg-config \
-            jq
 
       - name: Install Rust toolchain
         run: |
@@ -126,13 +108,8 @@ jobs:
 
       - name: Install Node.js 20
         run: |
-          if command -v apt-get &>/dev/null; then
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs
-          else
-            dnf install -y nodejs || \
-              (curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs)
-          fi
+          dnf install -y nodejs || \
+            (curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs)
           node --version
           npm --version
 
@@ -168,7 +145,7 @@ jobs:
         run: |
           echo "=== Bundle outputs ==="
           find src-tauri/target/release/bundle -type f \
-            \( -name "*.AppImage" -o -name "*.rpm" -o -name "*.deb" \) \
+            \( -name "*.AppImage" -o -name "*.rpm" \) \
             -exec ls -lh {} \; 2>/dev/null || echo "No bundles found"
           echo ""
           echo "=== Binary ==="
@@ -192,17 +169,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload DEB (${{ matrix.distro }})
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: deb-${{ matrix.distro }}
-          path: src-tauri/target/release/bundle/deb/*.deb
-          if-no-files-found: ignore
-          retention-days: 14
-
   # ==========================================================================
-  # Stage 3: Smoke test install on distros
+  # Stage 3: Smoke test install on Fedora
   # ==========================================================================
   smoke-test:
     name: Smoke test on ${{ matrix.distro }}
@@ -215,11 +183,6 @@ jobs:
           - distro: fedora-40
             image: fedora:40
             artifact: rpm-fedora-40
-            install_cmd: "dnf install -y"
-          - distro: ubuntu-24.04
-            image: ubuntu:24.04
-            artifact: deb-ubuntu-24.04
-            install_cmd: "apt-get install -y"
 
     container:
       image: ${{ matrix.image }}
@@ -233,17 +196,7 @@ jobs:
           path: ./pkg
 
       - name: Install package
-        run: |
-          if command -v apt-get &>/dev/null; then
-            apt-get update
-            apt-get install -y \
-              libwebkit2gtk-4.1-0 libgtk-3-0 libappindicator3-1 \
-              librsvg2-2 libssl3
-            apt-get install -y ./pkg/*.deb
-          else
-            dnf install -y ./pkg/*.rpm
-          fi
-          echo "Package installed"
+        run: dnf install -y ./pkg/*.rpm
 
       - name: Verify desktop entry
         run: |

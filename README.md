@@ -27,7 +27,7 @@ Running ComfyUI from a terminal and opening it in a browser can be messy. ComfyU
 Let's be realistic—this wrapper isn't for everyone. Here is how to decide if you should use this repository or look elsewhere:
 
 ### ✅ You SHOULD use this if:
-* You run **Linux** (e.g. Fedora, Ubuntu) and want a native app container.
+* You run **Fedora Linux** and want a native app container.
 * You own an **AMD Radeon GPU** (RX 6000 or RX 7000 series) and want auto-configured ROCm integration.
 * You are tired of terminal clutter, background zombie processes, and manually managing ports.
 * You want a dedicated window with hardware acceleration enabled via WebKitGTK.
@@ -66,7 +66,7 @@ Let's be realistic—this wrapper isn't for everyone. Here is how to decide if y
 * **Robust Process Group Lifecycle** – Spawns ComfyUI in a process group (`process_group(0)`) and sends process-group `SIGTERM`/`SIGKILL` signals on exit, preventing residual python zombie processes.
 * **Bounded & Batched Log Routing** – Collects stdout/stderr via multi-threaded readers, pipes them through a bounded MPSC channel, stores them in a 2,000-entry memory log, and batches them (50 messages / 100ms) to the UI.
 * **Liveness Port Polling** – Continually polls the ComfyUI TCP port (`127.0.0.1:8188`) and redirects the Tauri webview immediately once it responds.
-* **Multi-Distro Packaging** – Generates portable AppImages, Fedora RPMs, and Debian/Ubuntu DEB packages.
+* **Fedora Packaging** – Generates portable AppImages and Fedora RPM packages.
 * **Rootless Local Installation** – Includes helper scripts to extract and relocate the application to local user space directories (`~/.local`) without requiring administrative permissions.
 
 ---
@@ -75,7 +75,7 @@ Let's be realistic—this wrapper isn't for everyone. Here is how to decide if y
 
 | Component | Minimum / Recommended |
 |---|---|
-| **Operating System** | Linux (Fedora 40+, Ubuntu 24.04+, Debian 12+, or compatible distributions) |
+| **Operating System** | Fedora 40+ |
 | **AMD GPU** | Radeon RX 6000, RX 7000, or RX 8000 Series (RDNA 2, RDNA 3, or RDNA 4 microarchitectures) |
 | **AMD ROCm** | version `7.2.4` or higher installed on host |
 | **Python Runtime** | version `3.12` |

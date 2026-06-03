@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# upgrade_rocm.sh — Upgrade ROCm ke versi 7.2.4 dari repo AMD resmi
-# Untuk: Fedora 44, GPU AMD RX 6800 XT (gfx1030)
+# upgrade_rocm.sh — Setup ROCm 7.2.4 dari repo AMD resmi
+# Untuk: Fedora 44, GPU AMD
 # Jalankan: sudo bash scripts/upgrade_rocm.sh
+#
+# Script ini IDEMPOTENT — aman dijalankan berkali-kali.
+# Hanya install yang belum ada, tidak hapus-install ulang yang sudah benar.
 # ==============================================================================
 set -e
 
@@ -10,13 +13,20 @@ ROCM_VERSION="7.2.4"
 RHEL_BASE="9.4"
 
 echo "========================================"
-echo " ROCm Upgrade ke versi $ROCM_VERSION"
+echo " ROCm Setup versi $ROCM_VERSION"
 echo "========================================"
 
-# --- 1. Tambah/update repo AMD ---
+# --- 1. Tambah/update repo AMD (skip jika sudah ada & sama) ---
 echo ""
-echo "[1/5] Menambahkan repo AMD ROCm $ROCM_VERSION..."
-sudo tee /etc/yum.repos.d/amdgpu.repo > /dev/null << EOF
+echo "[1/5] Mengecek repo AMD ROCm $ROCM_VERSION..."
+REPO_FILE="/etc/yum.repos.d/amdgpu.repo"
+EXPECTED_BASEURL="https://repo.radeon.com/rocm/rhel9/${ROCM_VERSION}/main"
+
+if [ -f "$REPO_FILE" ] && grep -q "$EXPECTED_BASEURL" "$REPO_FILE"; then
+    echo "ℹ️  Repo AMD ROCm $ROCM_VERSION sudah ada, skip."
+else
+    echo "   Menambahkan repo AMD ROCm $ROCM_VERSION..."
+    sudo tee /etc/yum.repos.d/amdgpu.repo > /dev/null << EOF
 [amdgpu]
 name=amdgpu
 baseurl=https://repo.radeon.com/amdgpu/latest/rhel/${RHEL_BASE}/main/x86_64/
@@ -33,39 +43,74 @@ priority=50
 gpgcheck=1
 gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
 EOF
-echo "✅ Repo ditambahkan."
+    echo "✅ Repo ditambahkan."
+    sudo rpm --import https://repo.radeon.com/rocm/rocm.gpg.key
+    echo "✅ GPG key diimport."
+fi
 
-# --- 2. Import GPG Key ---
+# --- 2. Hapus HANYA rocm-runtime lama dari repo Fedora (bukan AMD) ---
 echo ""
-echo "[2/5] Import GPG key AMD..."
-sudo rpm --import https://repo.radeon.com/rocm/rocm.gpg.key
-echo "✅ GPG key diimport."
+echo "[2/5] Mengecek ROCm lama dari repo Fedora..."
+if dnf list installed rocm-runtime 2>/dev/null | grep -q "fedora"; then
+    echo "   Ditemukan rocm-runtime dari repo Fedora (lama), menghapus..."
+    sudo dnf remove -y rocm-runtime 2>/dev/null || true
+    echo "✅ rocm-runtime lama dari repo Fedora dihapus."
+else
+    echo "ℹ️  Tidak ada ROCm lama dari repo Fedora, skip."
+fi
 
-# --- 3. Hapus ROCm lama (Fedora default) ---
+# --- 3. Install library ROCm yang belum ada ---
 echo ""
-echo "[3/5] Menghapus ROCm lama dari repo Fedora..."
-sudo dnf remove -y rocm-runtime rocm-smi rocminfo rocm-hip-runtime 2>/dev/null || true
-echo "✅ ROCm lama dihapus (atau sudah tidak ada)."
+echo "[3/5] Mengecek & install library ROCm yang dibutuhkan PyTorch..."
 
-# --- 4. Install ROCm 7.2.4 ---
-echo ""
-echo "[4/5] Menginstall ROCm $ROCM_VERSION..."
-sudo dnf install -y \
-    rocm-runtime \
-    rocm-hip-runtime \
-    rocm-smi-lib \
-    rocminfo \
-    hip-runtime-amd \
+ROCM_PACKAGES=(
+    rocm-runtime
+    rocm-hip-runtime
+    rocm-smi-lib
+    rocminfo
+    hip-runtime-amd
     rocm-dev
-echo "✅ ROCm $ROCM_VERSION terinstall."
+    hipsparse
+    "hipsparse${ROCM_VERSION}"
+    rocsparse
+    "rocsparse${ROCM_VERSION}"
+    rocblas
+    "rocblas${ROCM_VERSION}"
+    hipblas
+    "hipblas${ROCM_VERSION}"
+    hipblaslt
+    "hipblaslt${ROCM_VERSION}"
+    rocfft
+    "rocfft${ROCM_VERSION}"
+    hipsolver
+    "hipsolver${ROCM_VERSION}"
+    miopen-hip
+    "miopen-hip${ROCM_VERSION}"
+    comgr
+    "comgr${ROCM_VERSION}"
+)
 
-# --- 5. Update LD_LIBRARY_PATH di .bashrc ---
+# Cek mana yang belum terinstall
+MISSING=()
+for pkg in "${ROCM_PACKAGES[@]}"; do
+    if ! dnf list installed "$pkg" &>/dev/null; then
+        MISSING+=("$pkg")
+    fi
+done
+
+if [ ${#MISSING[@]} -eq 0 ]; then
+    echo "ℹ️  Semua library ROCm sudah terinstall, skip."
+else
+    echo "   Package yang perlu diinstall: ${MISSING[*]}"
+    sudo dnf install -y "${MISSING[@]}"
+    echo "✅ Library ROCm terinstall."
+fi
+
+# --- 4. Update LD_LIBRARY_PATH di .bashrc (skip jika sudah ada) ---
 echo ""
-echo "[5/5] Mengkonfigurasi environment variables..."
-
+echo "[4/5] Mengkonfigurasi environment variables..."
 BASHRC="$HOME/.bashrc"
 
-# Tambahkan hanya jika belum ada
 if ! grep -q "# ROCm PATH" "$BASHRC"; then
     cat >> "$BASHRC" << 'ENVEOF'
 
@@ -76,7 +121,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rocm/lib:/opt/rocm/lib64
 ENVEOF
     echo "✅ Environment variables ditambahkan ke ~/.bashrc"
 
-    # Auto-detect GPU and add HSA override only if needed (not for native gfx1030/gfx1100)
     if command -v rocminfo &> /dev/null; then
         GFX_VERSION=$(rocminfo 2>/dev/null | grep -oP 'gfx\K[0-9]+' | head -1)
         case "$GFX_VERSION" in
@@ -92,32 +136,35 @@ ENVEOF
                 echo "ℹ️  GPU gfx$GFX_VERSION sudah native-supported, tidak perlu HSA override"
                 ;;
             *)
-                echo "⚠️  GPU gfx$GFX_VERSION tidak dikenali, tidak menambahkan HSA override"
+                echo "⚠️  GPU gfx$GFX_VERSION tidak dikenali"
                 ;;
         esac
-    else
-        echo "⚠️  rocminfo belum tersedia, skip deteksi HSA override"
     fi
 else
-    echo "ℹ️  Environment variables sudah ada di ~/.bashrc"
+    echo "ℹ️  Environment variables sudah ada di ~/.bashrc, skip."
 fi
 
-# --- Verifikasi ---
+# --- 5. Verifikasi ---
 echo ""
-echo "========================================"
-echo " Verifikasi Instalasi"
-echo "========================================"
+echo "[5/5] Verifikasi instalasi..."
 echo ""
 
-echo "ROCm version:"
-/opt/rocm/bin/rocminfo 2>/dev/null | grep -i "ROCk\|Agent\|gfx" | head -10 || echo "⚠️  rocminfo belum bisa dijalankan, coba logout/login dulu"
+if ldconfig -p 2>/dev/null | grep -q "libhipsparse"; then
+    echo "✅ libhipsparse  : OK"
+else
+    echo "⚠️  libhipsparse tidak ditemukan"
+fi
 
-echo ""
-echo "libroctx64 location:"
-find /opt/rocm /usr/lib* -name "libroctx64*" 2>/dev/null || echo "⚠️  Library tidak ditemukan"
+if command -v rocminfo &>/dev/null; then
+    GFX=$(rocminfo 2>/dev/null | grep -oP 'gfx[0-9]+' | head -1)
+    echo "✅ GPU terdeteksi : ${GFX:-tidak terdeteksi}"
+else
+    echo "⚠️  rocminfo belum tersedia"
+fi
 
 echo ""
 echo "========================================"
-echo "✅ SELESAI! Jalankan: source ~/.bashrc"
-echo "   Lalu test: python -c \"import torch; print(torch.cuda.is_available())\""
+echo "✅ SELESAI!"
+echo "   Jalankan: source ~/.bashrc"
+echo "   Test    : python -c \"import torch; print(torch.cuda.is_available())\""
 echo "========================================"
