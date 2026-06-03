@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI Desktop Launcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="glow-container">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <div class="launcher-container">
+        <div class="header">
+            <h1 class="title">ComfyUI<span>Desktop</span></h1>
+            <p class="subtitle">Radeon RX 6800 XT Edition</p>
+        </div>
+
+        <div class="spinner-container">
+            <div class="glow-ring"></div>
+            <div class="spinner">
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" class="track"></circle>
+                    <circle cx="50" cy="50" r="45" class="fill"></circle>
+                </svg>
+            </div>
+            <div class="spinner-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="status-container">
+            <div class="status-indicator">
+                <span class="pulse-dot"></span>
+                <span id="status-text">Booting launcher environment...</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

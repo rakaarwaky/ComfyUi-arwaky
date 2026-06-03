@@ -1,0 +1,13 @@
+# ==============================================================================
+# ComfyUI ROCm 7.2.4 Virtual Environment Requirements
+# ==============================================================================
+# Run: pip install -r requirements.txt
+# ==============================================================================
+
+# 1. PyTorch ROCm 7.2.4 Wheels (Python 3.12, Linux x86_64)
+https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torch-2.9.1%2Brocm7.2.4.lw.git39497456-cp312-cp312-linux_x86_64.whl
+https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torchvision-0.24.0%2Brocm7.2.4.gitb919bd0c-cp312-cp312-linux_x86_64.whl
+https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/torchaudio-2.9.0%2Brocm7.2.4.gite3c6ee2b-cp312-cp312-linux_x86_64.whl
+
+# 2. ComfyUI Core Dependencies
+-r ComfyUI/requirements.txt
