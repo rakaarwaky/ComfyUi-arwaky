@@ -1,0 +1,266 @@
+[
+  {
+    "category": "configs",
+    "filename": "sd_xl_base.yaml",
+    "url": "https://raw.githubusercontent.com/Stability-AI/generative-models/main/configs/inference/sd_xl_base.yaml",
+    "size_bytes": 3000,
+    "group": "sdxl",
+    "notes": "SDXL inference config"
+  },
+  {
+    "category": "embeddings",
+    "filename": "easynegative.safetensors",
+    "url": "https://huggingface.co/datasets/gsdf/EasyNegative/resolve/main/EasyNegative.safetensors",
+    "size_bytes": 24000,
+    "group": "other",
+    "notes": "Negative prompt embedding"
+  },
+  {
+    "category": "vae_approx",
+    "filename": "taesdxl_decoder.pth",
+    "url": "https://github.com/madebyollin/taesd/raw/main/taesdxl_decoder.pth",
+    "size_bytes": 1100000,
+    "group": "other",
+    "notes": "Fast VAE decoder for previews"
+  },
+  {
+    "category": "vae",
+    "filename": "ae.safetensors",
+    "url": "https://huggingface.co/diffusers/FLUX.1-vae/resolve/main/diffusion_pytorch_model.safetensors",
+    "size_bytes": 167666902,
+    "group": "flux",
+    "notes": "FLUX VAE"
+  },
+  {
+    "category": "vae",
+    "filename": "sdxl_vae.safetensors",
+    "url": "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl-vae-fp16-fix.safetensors",
+    "size_bytes": 335000000,
+    "group": "sdxl",
+    "notes": "SDXL VAE FP16 fix (memory optimized for RX6800XT)"
+  },
+  {
+    "category": "detection",
+    "filename": "face_yolov8n.pt",
+    "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt",
+    "size_bytes": 6500000,
+    "group": "other",
+    "notes": "Face detection for ADetailer"
+  },
+  {
+    "category": "upscale_models",
+    "filename": "RealESRGAN_x4plus_anime_6B.pth",
+    "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+    "size_bytes": 18000000,
+    "group": "other",
+    "notes": "Anime upscaler"
+  },
+  {
+    "category": "upscale_models",
+    "filename": "4x-UltraSharp.pth",
+    "url": "https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth",
+    "size_bytes": 67000000,
+    "group": "other",
+    "notes": "General purpose 4x upscaler"
+  },
+  {
+    "category": "latent_upscale_models",
+    "filename": "latent-upscaler-v2.1_SDxl-x1.5.safetensors",
+    "url": "https://huggingface.co/city96/SD-Latent-Upscaler/resolve/main/latent-upscaler-v2.1_SDxl-x1.5.safetensors",
+    "size_bytes": 7400000,
+    "group": "other",
+    "notes": "Latent space upscaler"
+  },
+  {
+    "category": "optical_flow",
+    "filename": "raft_large_C_T_V2-1bb1363a.pth",
+    "url": "https://download.pytorch.org/models/raft_large_C_T_V2-1bb1363a.pth",
+    "size_bytes": 85000000,
+    "group": "video",
+    "notes": "RAFT optical flow for video"
+  },
+  {
+    "category": "model_patches",
+    "filename": "resadapter_v1_sdxl_extralora.safetensors",
+    "url": "https://huggingface.co/jiaxiangc/res-adapter/resolve/main/resadapter_v1_sdxl_extrapolation/pytorch_lora_weights.safetensors",
+    "size_bytes": 1844672,
+    "group": "sdxl",
+    "notes": "Resolution adapter LoRA"
+  },
+  {
+    "category": "frame_interpolation",
+    "filename": "film_net_fp32.pt",
+    "url": "https://huggingface.co/nguu/film-pytorch/resolve/main/film_net_fp32.pt",
+    "size_bytes": 156000000,
+    "group": "video",
+    "notes": "FILM frame interpolation"
+  },
+  {
+    "category": "background_removal",
+    "filename": "ben2.onnx",
+    "url": "https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx",
+    "size_bytes": 190000000,
+    "group": "video",
+    "notes": "BEN2 background removal"
+  },
+  {
+    "category": "loras",
+    "filename": "flux_realism_detailer.safetensors",
+    "url": "https://huggingface.co/fal/Realism-Detailer-Kontext-Dev-LoRA/resolve/main/high_detail.safetensors",
+    "size_bytes": 613109224,
+    "group": "flux",
+    "notes": "FLUX realism detailer LoRA"
+  },
+  {
+    "category": "clip",
+    "filename": "clip_l.safetensors",
+    "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors",
+    "size_bytes": 240000000,
+    "group": "flux",
+    "notes": "CLIP-L text encoder for FLUX"
+  },
+  {
+    "category": "clip_vision",
+    "filename": "clip_vision_g.safetensors",
+    "url": "https://huggingface.co/comfyanonymous/clip_vision_g/resolve/main/clip_vision_g.safetensors",
+    "size_bytes": 3700000000,
+    "group": "sdxl",
+    "notes": "CLIP Vision G for IP-Adapter"
+  },
+  {
+    "category": "clip_vision",
+    "filename": "clip_vision_h.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
+    "size_bytes": 3700000000,
+    "group": "sdxl",
+    "notes": "CLIP Vision H"
+  },
+  {
+    "category": "style_models",
+    "filename": "ip-adapter_sdxl.safetensors",
+    "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors",
+    "size_bytes": 1100000000,
+    "group": "sdxl",
+    "notes": "IP-Adapter for SDXL"
+  },
+  {
+    "category": "audio_encoders",
+    "filename": "laion_clap_music.pt",
+    "url": "https://huggingface.co/lukewys/laion_clap/resolve/main/music_audioset_epoch_15_esc_90.14.pt",
+    "size_bytes": 1200000000,
+    "group": "other",
+    "notes": "CLAP audio encoder"
+  },
+  {
+    "category": "photomaker",
+    "filename": "photomaker-v2.bin",
+    "url": "https://huggingface.co/TencentARC/PhotoMaker-V2/resolve/main/photomaker-v2.bin",
+    "size_bytes": 1200000000,
+    "group": "other",
+    "notes": "PhotoMaker V2 for identity preservation"
+  },
+  {
+    "category": "geometry_estimation",
+    "filename": "depth_anything_v3_vitl.pth",
+    "url": "https://huggingface.co/depth-anything/DA3-LARGE/resolve/main/model.safetensors",
+    "size_bytes": 1400000000,
+    "group": "video",
+    "notes": "Depth Anything V3 (large)"
+  },
+  {
+    "category": "animatediff_models",
+    "filename": "mm_sdxl_v10_beta.ckpt",
+    "url": "https://huggingface.co/guoyww/AnimateDiff/resolve/main/mm_sdxl_v10_beta.ckpt",
+    "size_bytes": 1600000000,
+    "group": "video",
+    "notes": "AnimateDiff motion module for SDXL"
+  },
+  {
+    "category": "controlnet",
+    "filename": "flux1-dev-controlnet-union.safetensors",
+    "url": "https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro/resolve/main/diffusion_pytorch_model.safetensors",
+    "size_bytes": 3400000000,
+    "group": "flux",
+    "notes": "FLUX ControlNet Union Pro"
+  },
+  {
+    "category": "gligen",
+    "filename": "gligen_sd14_textbox_pruned.safetensors",
+    "url": "https://huggingface.co/comfyanonymous/GLIGEN_pruned_safetensors/resolve/main/gligen_sd14_textbox_pruned.safetensors",
+    "size_bytes": 836445074,
+    "group": "other",
+    "notes": "GLIGEN for spatial control"
+  },
+  {
+    "category": "text_encoders",
+    "filename": "t5xxl_fp8_e4m3fn.safetensors",
+    "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors",
+    "size_bytes": 4900000000,
+    "group": "flux",
+    "notes": "T5-XXL FP8 (memory efficient for RX6800XT 16GB)"
+  },
+  {
+    "category": "checkpoints",
+    "filename": "sdxl_lightning_8step.safetensors",
+    "url": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_8step.safetensors",
+    "size_bytes": 6600000000,
+    "group": "sdxl",
+    "notes": "SDXL Lightning 8-step (fast inference)"
+  },
+  {
+    "category": "checkpoints",
+    "filename": "Juggernaut-XL-Ragnarok.safetensors",
+    "url": "https://huggingface.co/Drnerdy81/juggernaut-xl-ragnarok/resolve/main/juggernautXL_ragnarokBy.safetensors",
+    "size_bytes": 6600000000,
+    "group": "sdxl",
+    "notes": "Juggernaut XL Ragnarok (general purpose)"
+  },
+  {
+    "category": "diffusion_models",
+    "filename": "flux1-dev-Q5_K_S.gguf",
+    "url": "https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q5_K_S.gguf",
+    "size_bytes": 8285267232,
+    "group": "flux",
+    "notes": "FLUX Dev Q5_K_S (quality/size sweet spot)"
+  },
+  {
+    "category": "diffusion_models",
+    "filename": "flux1-schnell-Q8_0.gguf",
+    "url": "https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q8_0.gguf",
+    "size_bytes": 10000000000,
+    "group": "flux",
+    "notes": "FLUX Schnell Q8_0 (fast generation)"
+  },
+  {
+    "category": "diffusers",
+    "filename": "stable-diffusion-xl-base-1.0",
+    "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+    "size_bytes": 0,
+    "group": "sdxl",
+    "notes": "SDXL Base diffusers pipeline"
+  },
+  {
+    "category": "vae",
+    "filename": "wan_2.1_vae.safetensors",
+    "url": "https://huggingface.co/neuregex/Bernini-1.3B-ComfyUI/resolve/main/vae/wan_2.1_vae.safetensors",
+    "size_bytes": 253815318,
+    "group": "video",
+    "notes": "Wan 2.1 VAE (Required for Wan/Bernini-R)"
+  },
+  {
+    "category": "text_encoders",
+    "filename": "umt5-xxl-encoder-Q5_K_M.gguf",
+    "url": "https://huggingface.co/neuregex/Bernini-1.3B-ComfyUI/resolve/main/text_encoders/umt5-xxl-encoder-Q5_K_M.gguf",
+    "size_bytes": 4145878880,
+    "group": "video",
+    "notes": "UMT5 Text Encoder Q5_K_M GGUF (Required for Wan/Bernini-R)"
+  },
+  {
+    "category": "diffusion_models",
+    "filename": "bernini_r_1.3B-Q6_K.gguf",
+    "url": "https://huggingface.co/neuregex/Bernini-1.3B-ComfyUI/resolve/main/bernini_r_1.3B-Q6_K.gguf",
+    "size_bytes": 1198647520,
+    "group": "video",
+    "notes": "Bernini-R 1.3B Renderer Q6_K GGUF (High quality, compatible with RX6800XT)"
+  }
+]

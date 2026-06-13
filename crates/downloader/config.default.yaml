@@ -1,0 +1,38 @@
+# ComfyUI Model Downloader - Configuration
+# Copy this file to ~/.config/comfyui-downloader/config.yaml or keep locally
+
+# Path where your models will be downloaded and stored
+models_dir: "/home/raka/SharedData/Models"
+
+# Optional: Your HuggingFace User Access Token (required for some gated models)
+hf_token: "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"
+
+# Specific subdirectories for each category of model.
+# Paths are relative to models_dir above.
+paths:
+  checkpoints: "checkpoints/"
+  text_encoders: "text_encoders/"
+  clip: "clip/"
+  clip_vision: "clip_vision/"
+  configs: "configs/"
+  controlnet: "controlnet/"
+  diffusion_models: "diffusion_models/"
+  embeddings: "embeddings/"
+  loras: "loras/"
+  upscale_models: "upscale_models/"
+  vae: "vae/"
+  audio_encoders: "audio_encoders/"
+  model_patches: "model_patches/"
+  vae_approx: "vae_approx/"
+  gligen: "gligen/"
+  hypernetworks: "hypernetworks/"
+  photomaker: "photomaker/"
+  background_removal: "background_removal/"
+  detection: "detection/"
+  frame_interpolation: "frame_interpolation/"
+  geometry_estimation: "geometry_estimation/"
+  latent_upscale: "latent_upscale_models/"
+  optical_flow: "optical_flow/"
+  style_models: "style_models/"
+  diffusers: "diffusers/"
+  animatediff_models: "animatediff_models/"
