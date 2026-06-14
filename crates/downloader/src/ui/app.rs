@@ -851,10 +851,17 @@ pub fn download_one_model(
 }
 
 fn model_sort_size(model: &Model, cache_sizes: &std::collections::HashMap<String, u64>) -> u64 {
-    if model.size_bytes > 0 {
+    let size = if model.size_bytes > 0 {
         model.size_bytes
     } else {
         cache_sizes.get(&model.url).copied().unwrap_or(0)
+    };
+    
+    // If size is 0 (unknown), treat it as u64::MAX to push it to the end of the queue
+    if size == 0 {
+        u64::MAX
+    } else {
+        size
     }
 }
 

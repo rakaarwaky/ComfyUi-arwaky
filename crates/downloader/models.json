@@ -351,8 +351,8 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "LTX-2.3-Dev-Q4_K_S.gguf",
-    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Dev-Q4_K_S.gguf",
+    "filename": "ltx-2.3-22b-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/ltx-2.3-22b-dev-Q4_K_S.gguf",
     "group": "video",
     "notes": "LTX-2.3 Dev Q4_K_S GGUF (~8.5 GB - optimized for 16GB VRAM)"
   },
@@ -406,8 +406,8 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "LTX-2.3-Distilled-Q4_K_M.gguf",
-    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Distilled-Q4_K_M.gguf",
+    "filename": "ltx-2.3-22b-distilled-Q4_K_M.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/distilled/ltx-2.3-22b-distilled-Q4_K_M.gguf",
     "group": "video",
     "notes": "LTX-2.3 Distilled Q4_K_M GGUF (~9 GB - optimized for 16GB VRAM)"
   },
@@ -536,7 +536,7 @@
   {
     "category": "diffusion_models",
     "filename": "flux1-fill-dev-Q4_K_S.gguf",
-    "url": "https://huggingface.co/city96/Flux-1-Fill-dev-GGUF/resolve/main/flux1-fill-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/YarvixPA/FLUX.1-Fill-dev-GGUF/resolve/main/flux1-fill-dev-Q4_K_S.gguf",
     "group": "flux",
     "notes": "FLUX.1 Fill Dev Q4_K_S GGUF (~7 GB - optimized for 16GB VRAM)"
   },
@@ -620,8 +620,8 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "LTX-2.3-Dev-Q4_K_S.gguf",
-    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Dev-Q4_K_S.gguf",
+    "filename": "ltx-2.3-22b-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/ltx-2.3-22b-dev-Q4_K_S.gguf",
     "group": "video",
     "notes": "LTX-2.3 Dev Q4_K_S GGUF (~8.5 GB - optimized for 16GB VRAM)"
   },
@@ -746,7 +746,7 @@
   {
     "category": "diffusion_models",
     "filename": "ernie-image-turbo-fp8.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image-turbo-fp8.safetensors",
+    "url": "https://huggingface.co/Bedovyy/ERNIE-Image-Quantized/resolve/main/ernie-image-turbo-fp8.safetensors",
     "group": "other",
     "notes": "ERNIE Image Turbo FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
@@ -769,7 +769,7 @@
   {
     "category": "diffusion_models",
     "filename": "ernie-image-turbo-fp8.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image-turbo-fp8.safetensors",
+    "url": "https://huggingface.co/Bedovyy/ERNIE-Image-Quantized/resolve/main/ernie-image-turbo-fp8.safetensors",
     "group": "other",
     "notes": "ERNIE Image Turbo FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
@@ -828,15 +828,15 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2-t2v-14b-Q4_K_S.gguf",
-    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2-t2v-14b-Q4_K_S.gguf",
+    "filename": "Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf",
+    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/LowNoise/Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf",
     "group": "video",
     "notes": "Wan 2.2 T2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2-t2v-14b-Q4_K_S.gguf",
-    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2-t2v-14b-Q4_K_S.gguf",
+    "filename": "Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf",
+    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/LowNoise/Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf",
     "group": "video",
     "notes": "Wan 2.2 T2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
