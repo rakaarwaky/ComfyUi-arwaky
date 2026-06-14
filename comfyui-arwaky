@@ -16,82 +16,82 @@ SCRIPTS_FOLDER="$SCRIPT_DIR/scripts"
 
 show_menu() {
     clear
-    echo -e "${CYAN}${BOLD}====================================================${NC}"
-    echo -e "${CYAN}${BOLD}        ComfyUI-arwaky Script Selector Menu        ${NC}"
-    echo -e "${CYAN}${BOLD}====================================================${NC}"
-    echo -e "Silakan pilih script yang ingin dijalankan:\n"
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}│${NC}${BOLD}          ComfyUI-arwaky Script Selector Menu           ${NC}${CYAN}│${NC}"
+    echo -e "${CYAN}└────────────────────────────────────────────────────────┘${NC}"
+    echo -e "Please choose a script to execute:\n"
     
     echo -e " [1] ${GREEN}${BOLD}Start Standalone ComfyUI (Backend Only)${NC}"
-    echo -e "     Menjalankan server backend ComfyUI dengan GPU ROCm."
-    echo -e " [2] ${GREEN}${BOLD}Download Models Manager${NC}"
-    echo -e "     Membuka TUI downloader untuk mengelola dan mendownload model."
+    echo -e "     Run the ComfyUI backend server with AMD ROCm GPU acceleration."
+    echo -e " [2] ${GREEN}${BOLD}Download Models Manager (TUI)${NC}"
+    echo -e "     Open the interactive TUI downloader to manage and download models."
     echo -e " [3] ${GREEN}${BOLD}Run Symlink Watcher Service${NC}"
-    echo -e "     Menjalankan pemantau symlink secara aktif."
+    echo -e "     Run the symlink monitor service to actively track file links."
     echo -e " [4] ${GREEN}${BOLD}Install Dependencies / Local Setup${NC}"
-    echo -e "     Melakukan instalasi dependensi Python/pip ComfyUI lokal."
+    echo -e "     Install local Python/pip dependencies for ComfyUI."
     echo -e " [5] ${GREEN}${BOLD}Upgrade ROCm Libraries${NC}"
-    echo -e "     Mengecek dan memperbarui pustaka ROCm untuk PyTorch."
-    echo -e " [6] ${GREEN}${BOLD}Build Desktop App Launcher (Rust/Tauri)${NC}"
-    echo -e "     Membangun aplikasi launcher desktop (release build)."
+    echo -e "     Verify and upgrade ROCm libraries for PyTorch."
+    echo -e " [6] ${GREEN}${BOLD}Build Desktop App & Downloader (Release)${NC}"
+    echo -e "     Build the desktop launcher and model downloader release binaries."
     echo -e " [7] ${GREEN}${BOLD}Run Local CI Checks (Clippy & Format)${NC}"
-    echo -e "     Mengecek format kode Rust, clippy warnings, dan testing."
+    echo -e "     Run local CI checks (Rust format, clippy, tests, and shellcheck)."
     echo -e " [8] ${GREEN}${BOLD}Bump Project Version${NC}"
-    echo -e "     Mengubah versi rilis project di seluruh workspace."
-    echo -e " [q] ${RED}Keluar (Quit)${NC}"
-    echo -e "\n${CYAN}====================================================${NC}"
+    echo -e "     Bump the project release version across the workspace."
+    echo -e " [q] ${RED}Quit${NC}"
+    echo -e "\n${CYAN}──────────────────────────────────────────────────────────${NC}"
 }
 
 while true; do
     show_menu
-    read -rp "Masukkan pilihan Anda (1-8 atau q): " pilihan
+    read -rp "Enter your choice (1-8 or q): " pilihan
     
     case $pilihan in
         1)
-            echo -e "\n${YELLOW}Menjalankan ComfyUI Backend Standalone...${NC}"
+            echo -e "\n${YELLOW}Starting ComfyUI Standalone Backend...${NC}"
             "$SCRIPTS_FOLDER/run_comfyui.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         2)
-            echo -e "\n${YELLOW}Membuka Model Downloader...${NC}"
+            echo -e "\n${YELLOW}Opening Model Downloader...${NC}"
             "$SCRIPTS_FOLDER/download_models.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         3)
-            echo -e "\n${YELLOW}Menjalankan Symlink Watcher (tekan Ctrl+C untuk berhenti)...${NC}"
+            echo -e "\n${YELLOW}Running Symlink Watcher (press Ctrl+C to stop)...${NC}"
             "$SCRIPTS_FOLDER/watch-symlinks.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         4)
-            echo -e "\n${YELLOW}Menjalankan Installer/Setup Lokal...${NC}"
+            echo -e "\n${YELLOW}Running Local Installer / Setup...${NC}"
             "$SCRIPTS_FOLDER/install_local.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         5)
-            echo -e "\n${YELLOW}Menjalankan Upgrade ROCm...${NC}"
+            echo -e "\n${YELLOW}Running ROCm Library Upgrade...${NC}"
             "$SCRIPTS_FOLDER/upgrade_rocm.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         6)
-            echo -e "\n${YELLOW}Membangun Aplikasi Desktop (Tauri)...${NC}"
+            echo -e "\n${YELLOW}Building Desktop App Launcher & Downloader...${NC}"
             "$SCRIPTS_FOLDER/build.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         7)
-            echo -e "\n${YELLOW}Menjalankan Pemeriksaan CI Lokal...${NC}"
+            echo -e "\n${YELLOW}Running Local CI Checks...${NC}"
             "$SCRIPTS_FOLDER/ci-local.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         8)
-            echo -e "\n${YELLOW}Menjalankan Bump Version...${NC}"
+            echo -e "\n${YELLOW}Running Project Version Bump...${NC}"
             "$SCRIPTS_FOLDER/bump-version.sh"
-            read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+            read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         [qQ])
-            echo -e "\n${GREEN}Keluar. Sampai jumpa!${NC}"
+            echo -e "\n${GREEN}Exiting. Goodbye!${NC}"
             exit 0
             ;;
         *)
-            echo -e "\n${RED}Pilihan tidak valid!${NC}"
+            echo -e "\n${RED}Invalid choice!${NC}"
             sleep 1.5
             ;;
     esac

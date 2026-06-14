@@ -21,7 +21,7 @@ restore_symlinks() {
 restore_symlinks
 
 # Pantau perubahan pembuatan/penghapusan file/folder di dalam ComfyUI
-inotifywait -m -e create -e delete -e move -e delete_self "$TARGET_DIR" | while read -r directory event file; do
+inotifywait -m -e create -e delete -e move -e delete_self "$TARGET_DIR" | while read -r _directory _event file; do
     if [[ "$file" =~ ^(input|models|output|user)$ ]]; then
         # Beri jeda 1 detik agar proses Git menyelesaikan operasinya terlebih dahulu
         sleep 1

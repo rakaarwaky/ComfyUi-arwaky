@@ -59,23 +59,29 @@ run_step() {
 
 # === Step 1: cargo fmt ===
 if $FIX; then
-  run_step "cargo fmt (fix)" "cargo fmt --manifest-path crates/launcher/Cargo.toml"
+  run_step "cargo fmt launcher (fix)" "cargo fmt --manifest-path crates/launcher/Cargo.toml"
+  run_step "cargo fmt downloader (fix)" "cargo fmt --manifest-path crates/downloader/Cargo.toml"
 else
-  run_step "cargo fmt (check)" "cargo fmt --manifest-path crates/launcher/Cargo.toml --check"
+  run_step "cargo fmt launcher (check)" "cargo fmt --manifest-path crates/launcher/Cargo.toml --check"
+  run_step "cargo fmt downloader (check)" "cargo fmt --manifest-path crates/downloader/Cargo.toml --check"
 fi
 
 # === Step 2: cargo check ===
-run_step "cargo check" "cargo check --manifest-path crates/launcher/Cargo.toml"
+run_step "cargo check launcher" "cargo check --manifest-path crates/launcher/Cargo.toml"
+run_step "cargo check downloader" "cargo check --manifest-path crates/downloader/Cargo.toml"
 
 # === Step 3: cargo clippy ===
 if $FIX; then
-  run_step "cargo clippy (fix)" "cargo clippy --manifest-path crates/launcher/Cargo.toml --fix --allow-dirty -- -D warnings"
+  run_step "cargo clippy launcher (fix)" "cargo clippy --manifest-path crates/launcher/Cargo.toml --fix --allow-dirty -- -D warnings"
+  run_step "cargo clippy downloader (fix)" "cargo clippy --manifest-path crates/downloader/Cargo.toml --fix --allow-dirty -- -D warnings"
 else
-  run_step "cargo clippy" "cargo clippy --manifest-path crates/launcher/Cargo.toml -- -D warnings"
+  run_step "cargo clippy launcher" "cargo clippy --manifest-path crates/launcher/Cargo.toml -- -D warnings"
+  run_step "cargo clippy downloader" "cargo clippy --manifest-path crates/downloader/Cargo.toml -- -D warnings"
 fi
 
 # === Step 4: cargo test ===
-run_step "cargo test" "cargo test --manifest-path crates/launcher/Cargo.toml"
+run_step "cargo test launcher" "cargo test --manifest-path crates/launcher/Cargo.toml"
+run_step "cargo test downloader" "cargo test --manifest-path crates/downloader/Cargo.toml"
 
 # === Step 5: shellcheck ===
 if $FAST || $SKIP_SHELLCHECK; then
@@ -107,7 +113,8 @@ if $FAST || $SKIP_AUDIT; then
   skip "cargo-audit (skipped)"
 else
   if cargo audit --version &>/dev/null 2>&1; then
-    run_step "cargo-audit" "cargo audit --manifest-path crates/launcher/Cargo.toml"
+    run_step "cargo-audit launcher" "(cd crates/launcher && cargo audit)"
+    run_step "cargo-audit downloader" "(cd crates/downloader && cargo audit)"
   else
     skip "cargo-audit (not installed, run: cargo install cargo-audit --locked)"
   fi

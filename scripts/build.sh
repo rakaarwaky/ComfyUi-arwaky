@@ -21,6 +21,10 @@ export NO_STRIP=true
 npx @tauri-apps/cli@latest build --no-bundle
 
 echo ""
+echo "Building comfyui-downloader (cargo release)..."
+cargo build --release --manifest-path "$ROOT_DIR/crates/downloader/Cargo.toml"
+
+echo ""
 echo "[2/3] Copying build artifacts to dist/..."
 
 # Clean and recreate dist/
@@ -33,6 +37,12 @@ if [ -f "$ROOT_DIR/crates/launcher/target/release/app" ]; then
     echo "  ✅ Binary copied to dist/comfyui-desktop"
 fi
 
+# Copy downloader binary
+if [ -f "$ROOT_DIR/crates/downloader/target/release/comfyui-downloader" ]; then
+    cp "$ROOT_DIR/crates/downloader/target/release/comfyui-downloader" "$DIST_DIR/comfyui-downloader"
+    echo "  ✅ Downloader binary copied to dist/comfyui-downloader"
+fi
+
 # Generate checksums for all artifacts
 echo ""
 echo "  Generating SHA256 checksums..."
@@ -40,6 +50,10 @@ cd "$DIST_DIR"
 if [ -f "comfyui-desktop" ]; then
     sha256sum "comfyui-desktop" >> SHA256SUMS.txt
     echo "    ✅ comfyui-desktop checksum generated"
+fi
+if [ -f "comfyui-downloader" ]; then
+    sha256sum "comfyui-downloader" >> SHA256SUMS.txt
+    echo "    ✅ comfyui-downloader checksum generated"
 fi
 cd "$ROOT_DIR"
 

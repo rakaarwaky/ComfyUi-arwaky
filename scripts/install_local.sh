@@ -12,6 +12,7 @@ set -e
 set -e
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck disable=SC2012
 RPM_FILE=$(ls -t "$ROOT_DIR/dist"/comfyui-desktop-*.rpm 2>/dev/null | head -n 1)
 BINARY_FILE="$ROOT_DIR/dist/comfyui-desktop"
 LOCAL_DIR="$HOME/.local"
@@ -112,6 +113,12 @@ else
     cp "$BINARY_FILE" "$LOCAL_DIR/bin/comfyui-desktop"
     chmod +x "$LOCAL_DIR/bin/comfyui-desktop"
     echo "  ✅ Binary installed to: $LOCAL_DIR/bin/comfyui-desktop"
+
+    if [ -f "$ROOT_DIR/dist/comfyui-downloader" ]; then
+        cp "$ROOT_DIR/dist/comfyui-downloader" "$LOCAL_DIR/bin/comfyui-downloader"
+        chmod +x "$LOCAL_DIR/bin/comfyui-downloader"
+        echo "  ✅ Downloader binary installed to: $LOCAL_DIR/bin/comfyui-downloader"
+    fi
 
     echo "[3/4] Installing application icons and generating desktop entry..."
     
