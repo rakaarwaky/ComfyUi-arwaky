@@ -204,8 +204,7 @@ pub fn handle_event(
                 }
             }
         }
-        Event::Mouse(mouse) => {
-            if mouse.kind == MouseEventKind::Down(MouseButton::Left) {
+        Event::Mouse(mouse) if mouse.kind == MouseEventKind::Down(MouseButton::Left) => {
                 let size = terminal.size()?;
                 
                 // Compute layout regions to map clicks
@@ -234,20 +233,20 @@ pub fn handle_event(
                         // 1. Click on Tab Navigation Bar
                         if mouse.row == body_layout[0].y {
                             let col = mouse.column.saturating_sub(body_layout[0].x);
-                            if col >= 2 && col < 7 {
+                            if (2..7).contains(&col) {
                                 // Prev button [<]
                                 if app.tab_offset > 0 {
                                     app.tab_offset -= 1;
                                     app.add_log("Shifted tabs left.");
                                 }
-                            } else if col >= 68 && col < 73 {
+                            } else if (68..73).contains(&col) {
                                 // Next button [>]
                                 let total_pages = 3 + app.categories.len();
                                 if app.tab_offset + 10 < total_pages {
                                     app.tab_offset += 1;
                                     app.add_log("Shifted tabs right.");
                                 }
-                            } else if col >= 8 && col < 68 {
+                            } else if (8..68).contains(&col) {
                                 let i = (col - 8) / 6;
                                 let rem = (col - 8) % 6;
                                 if rem < 5 {
@@ -262,9 +261,9 @@ pub fn handle_event(
                             }
                         }
                         // 2. Click on Model List items
-                        else if mouse.row >= main_layout[0].y + 1 
+                        else if mouse.row > main_layout[0].y
                             && mouse.row < main_layout[0].y + main_layout[0].height.saturating_sub(1)
-                            && mouse.column >= main_layout[0].x + 1
+                            && mouse.column > main_layout[0].x
                             && mouse.column < main_layout[0].x + main_layout[0].width.saturating_sub(1)
                         {
                             let clicked_row = mouse.row - (main_layout[0].y + 1);
@@ -282,20 +281,20 @@ pub fn handle_event(
                         else if mouse.row == inner_rect[2].y {
                             let col = mouse.column.saturating_sub(inner_rect[2].x);
                             if app.input_mode == InputMode::Normal {
-                                if col >= 56 && col <= 74 {
+                                if (56..=74).contains(&col) {
                                     app.input_mode = InputMode::Search;
-                                } else if col >= 75 && col <= 101 {
+                                } else if (75..=101).contains(&col) {
                                     app.select_all_missing_in_view();
-                                } else if col >= 102 && col <= 117 {
+                                } else if (102..=117).contains(&col) {
                                     app.refresh_selected_or_all_model_sizes();
-                                } else if col >= 118 && col <= 134 {
+                                } else if (118..=134).contains(&col) {
                                     app.state = AppState::Settings {
                                         active_field: 0,
                                         models_dir_input: app.config.models_dir.clone(),
                                         hf_token_input: app.config.hf_token.clone().unwrap_or_default(),
                                     };
                                     app.add_log("Settings menu opened.");
-                                } else if col >= 135 && col <= 154 {
+                                } else if (135..=154).contains(&col) {
                                     app.check_space_and_start();
                                 } else if col >= 155 {
                                     return Ok(false); // Exit downloader
@@ -315,7 +314,7 @@ pub fn handle_event(
                             *active_field = 1;
                         } else if mouse.row == popup_rect.y + 8 {
                             let col = mouse.column.saturating_sub(popup_rect.x);
-                            if col >= 4 && col <= 15 {
+                            if (4..=15).contains(&col) {
                                 // Save
                                 app.config.models_dir = models_dir_input.clone();
                                 app.config.hf_token = if hf_token_input.is_empty() {
@@ -329,7 +328,7 @@ pub fn handle_event(
                                     app.add_log("Configuration saved successfully.");
                                 }
                                 app.state = AppState::Menu;
-                            } else if col >= 22 && col <= 35 {
+                            } else if (22..=35).contains(&col) {
                                 // Cancel
                                 app.state = AppState::Menu;
                                 app.add_log("Settings menu closed without saving.");
@@ -340,11 +339,11 @@ pub fn handle_event(
                         let popup_rect = centered_rect(65, 30, size);
                         if mouse.row == popup_rect.y + 9 {
                             let col = mouse.column.saturating_sub(popup_rect.x);
-                            if col >= 4 && col <= 18 {
+                            if (4..=18).contains(&col) {
                                 // Proceed
                                 app.add_log("Proceeding with download despite disk space warning.");
                                 app.start_download();
-                            } else if col >= 24 && col <= 37 {
+                            } else if (24..=37).contains(&col) {
                                 // Cancel
                                 app.state = AppState::Menu;
                             }
@@ -354,7 +353,7 @@ pub fn handle_event(
                         let popup_rect = centered_rect(70, 42, size);
                         if mouse.row == popup_rect.y + popup_rect.height.saturating_sub(2) {
                             let col = mouse.column.saturating_sub(popup_rect.x);
-                            if col >= 4 && col <= 27 {
+                            if (4..=27).contains(&col) {
                                 // Cancel download
                                 app.add_log("User cancelled downloading queue.");
                                 app.cancel_token.store(true, Ordering::Release);
@@ -365,7 +364,7 @@ pub fn handle_event(
                         let popup_rect = centered_rect(50, 20, size);
                         if mouse.row == popup_rect.y + 6 {
                             let col = mouse.column.saturating_sub(popup_rect.x);
-                            if col >= 4 && col <= 13 {
+                            if (4..=13).contains(&col) {
                                 app.state = AppState::Menu;
                             }
                         }

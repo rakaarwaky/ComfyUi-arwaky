@@ -59,23 +59,23 @@ run_step() {
 
 # === Step 1: cargo fmt ===
 if $FIX; then
-  run_step "cargo fmt (fix)" "cargo fmt --manifest-path src-tauri/Cargo.toml"
+  run_step "cargo fmt (fix)" "cargo fmt --manifest-path crates/launcher/Cargo.toml"
 else
-  run_step "cargo fmt (check)" "cargo fmt --manifest-path src-tauri/Cargo.toml --check"
+  run_step "cargo fmt (check)" "cargo fmt --manifest-path crates/launcher/Cargo.toml --check"
 fi
 
 # === Step 2: cargo check ===
-run_step "cargo check" "cargo check --manifest-path src-tauri/Cargo.toml"
+run_step "cargo check" "cargo check --manifest-path crates/launcher/Cargo.toml"
 
 # === Step 3: cargo clippy ===
 if $FIX; then
-  run_step "cargo clippy (fix)" "cargo clippy --manifest-path src-tauri/Cargo.toml --fix --allow-dirty -- -D warnings"
+  run_step "cargo clippy (fix)" "cargo clippy --manifest-path crates/launcher/Cargo.toml --fix --allow-dirty -- -D warnings"
 else
-  run_step "cargo clippy" "cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings"
+  run_step "cargo clippy" "cargo clippy --manifest-path crates/launcher/Cargo.toml -- -D warnings"
 fi
 
 # === Step 4: cargo test ===
-run_step "cargo test" "cargo test --manifest-path src-tauri/Cargo.toml"
+run_step "cargo test" "cargo test --manifest-path crates/launcher/Cargo.toml"
 
 # === Step 5: shellcheck ===
 if $FAST || $SKIP_SHELLCHECK; then
@@ -95,9 +95,9 @@ fi
 
 # === Step 6: config validation ===
 if command -v jq &>/dev/null; then
-  run_step "tauri config validation" "jq empty src-tauri/tauri.conf.json"
+  run_step "tauri config validation" "jq empty crates/launcher/tauri.conf.json"
 elif command -v python3 &>/dev/null; then
-  run_step "tauri config validation" "python3 -c 'import json; json.load(open(\"src-tauri/tauri.conf.json\")); print(\"valid\")'"
+  run_step "tauri config validation" "python3 -c 'import json; json.load(open(\"crates/launcher/tauri.conf.json\")); print(\"valid\")'"
 else
   skip "tauri config validation (install jq or python3)"
 fi
@@ -107,7 +107,7 @@ if $FAST || $SKIP_AUDIT; then
   skip "cargo-audit (skipped)"
 else
   if cargo audit --version &>/dev/null 2>&1; then
-    run_step "cargo-audit" "cargo audit --manifest-path src-tauri/Cargo.toml"
+    run_step "cargo-audit" "cargo audit --manifest-path crates/launcher/Cargo.toml"
   else
     skip "cargo-audit (not installed, run: cargo install cargo-audit --locked)"
   fi

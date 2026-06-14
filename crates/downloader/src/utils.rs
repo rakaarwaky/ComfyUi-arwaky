@@ -129,7 +129,7 @@ pub fn get_available_space(path: &Path) -> std::io::Result<u64> {
     let res = unsafe { libc::statvfs(c_path.as_ptr(), stats.as_mut_ptr()) };
     if res == 0 {
         let stats = unsafe { stats.assume_init() };
-        Ok(stats.f_bavail as u64 * stats.f_frsize as u64)
+        Ok(stats.f_bavail * stats.f_frsize)
     } else {
         Err(std::io::Error::last_os_error())
     }

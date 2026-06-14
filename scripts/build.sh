@@ -7,7 +7,7 @@ set -e
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
-BUNDLE_DIR="$ROOT_DIR/src-tauri/target/release/bundle"
+BUNDLE_DIR="$ROOT_DIR/crates/launcher/target/release/bundle"
 
 echo "========================================"
 # ComfyUI Desktop — Tauri Build
@@ -36,8 +36,8 @@ fi
 
 
 # Copy standard binary
-if [ -f "$ROOT_DIR/src-tauri/target/release/app" ]; then
-    cp "$ROOT_DIR/src-tauri/target/release/app" "$DIST_DIR/comfyui-desktop"
+if [ -f "$ROOT_DIR/crates/launcher/target/release/app" ]; then
+    cp "$ROOT_DIR/crates/launcher/target/release/app" "$DIST_DIR/comfyui-desktop"
     echo "  ✅ Binary copied to dist/comfyui-desktop"
 fi
 

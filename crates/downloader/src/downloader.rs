@@ -29,7 +29,7 @@ pub enum DownloadEvent {
 
 pub fn download_diffusers_bg(diffusers_dir: &Path) -> Result<(), String> {
     if diffusers_dir.exists() {
-        if let Ok(entries) = fs::read_dir(&diffusers_dir) {
+        if let Ok(entries) = fs::read_dir(diffusers_dir) {
             if entries.count() > 10 {
                 return Ok(());
             }

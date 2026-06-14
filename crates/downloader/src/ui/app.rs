@@ -127,7 +127,7 @@ impl App {
 
     pub fn save_config_to_file(&self) -> std::io::Result<()> {
         let content = serde_yaml::to_string(&self.config)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
         
         // Save to local config.yaml
         let _ = fs::write("config.yaml", &content);
@@ -228,11 +228,11 @@ impl App {
         for (orig_idx, m) in filtered {
             let dest_dir = self.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            if !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url)) {
-                if !self.selected_indices.contains(&orig_idx) {
-                    self.selected_indices.push(orig_idx);
-                    count += 1;
-                }
+            if !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
+                && !self.selected_indices.contains(&orig_idx)
+            {
+                self.selected_indices.push(orig_idx);
+                count += 1;
             }
         }
         self.add_log(&format!("Selected {} missing models in current view.", count));
@@ -683,7 +683,6 @@ pub fn download_one_model(
 
     let file = if is_partial {
         fs::OpenOptions::new()
-            .write(true)
             .append(true)
             .open(&temp_path)
     } else {

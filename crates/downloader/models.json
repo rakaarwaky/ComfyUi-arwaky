@@ -112,7 +112,7 @@
     "notes": "Qwen Action Toy/Mannequin LoRA (Trigger: 'action the [subject]')"
   },
   {
-    "category": "clip",
+    "category": "text_encoders",
     "filename": "clip_l.safetensors",
     "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors",
     "group": "flux",
@@ -533,14 +533,6 @@
     "size_bytes": 5421137,
     "group": "other",
     "notes": "Required by Image Face Detection (Mediapipe)"
-  },
-  {
-    "category": "text_encoders",
-    "filename": "clip_l.safetensors",
-    "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors",
-    "size_bytes": 246142730,
-    "group": "flux",
-    "notes": "Required by Image Inpainting (Flux.1 Fill Dev)"
   },
   {
     "category": "text_encoders",
