@@ -328,11 +328,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "z_image_turbo_bf16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors",
-    "size_bytes": 12305081303,
-    "group": "other",
-    "notes": "Required by Canny to Image (Z-Image-Turbo)"
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "group": "qwen",
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "model_patches",
@@ -351,12 +350,11 @@
     "notes": "Required by Canny to Video (LTX 2.0)"
   },
   {
-    "category": "checkpoints",
-    "filename": "ltx-2-19b-dev-fp8.safetensors",
-    "url": "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev-fp8.safetensors",
-    "size_bytes": 27079768801,
+    "category": "diffusion_models",
+    "filename": "LTX-2.3-Dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Dev-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Canny to Video (LTX 2.0)"
+    "notes": "LTX-2.3 Dev Q4_K_S GGUF (~8.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "text_encoders",
@@ -407,12 +405,11 @@
     "notes": "Required by Depth to Video (ltx 2.0)"
   },
   {
-    "category": "checkpoints",
-    "filename": "ltx-2.3-22b-distilled-fp8.safetensors",
-    "url": "https://huggingface.co/Lightricks/LTX-2.3-fp8/resolve/main/ltx-2.3-22b-distilled-fp8.safetensors",
-    "size_bytes": 29527900160,
+    "category": "diffusion_models",
+    "filename": "LTX-2.3-Distilled-Q4_K_M.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Distilled-Q4_K_M.gguf",
     "group": "video",
-    "notes": "Required by First-Last-Frame to Video (LTX-2.3)"
+    "notes": "LTX-2.3 Distilled Q4_K_M GGUF (~9 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "frame_interpolation",
@@ -440,11 +437,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "FireRed-Image-Edit-1.1-transformer.safetensors",
-    "url": "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1-ComfyUI/resolve/main/FireRed-Image-Edit-1.1-transformer.safetensors",
-    "size_bytes": 40855876403,
-    "group": "other",
-    "notes": "Required by Image Edit (FireRed Image Edit 1.1)"
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "group": "qwen",
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "vae",
@@ -456,11 +452,10 @@
   },
   {
     "category": "text_encoders",
-    "filename": "mistral_3_small_flux2_bf16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors",
-    "size_bytes": 35583804047,
+    "filename": "mistral_3_small_flux2_Q4_K_M.gguf",
+    "url": "https://huggingface.co/city96/text-encoders-gguf/resolve/main/mistral_3_small_flux2_Q4_K_M.gguf",
     "group": "flux",
-    "notes": "Required by Image Edit (Flux.2 Dev)"
+    "notes": "Mistral 3 Small FLUX2 Q4_K_M GGUF (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -472,11 +467,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "flux2_dev_fp8mixed.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors",
-    "size_bytes": 35454955028,
+    "filename": "flux1-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q4_K_S.gguf",
     "group": "flux",
-    "notes": "Required by Image Edit (Flux.2 Dev)"
+    "notes": "FLUX.1 Dev Q4_K_S GGUF (~7 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
@@ -496,19 +490,17 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "longcat_image_edit_bf16.safetensors",
-    "url": "https://huggingface.co/TalmajM/LongCat-Image-Edit_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/longcat_image_edit_bf16.safetensors",
-    "size_bytes": 12541304504,
-    "group": "other",
-    "notes": "Required by Image Edit (LongCat Image Edit)"
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "group": "qwen",
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_edit_2509_fp8_e4m3fn.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors",
-    "size_bytes": 20433306910,
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "group": "qwen",
-    "notes": "Required by Image Edit (Qwen 2509)"
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -520,11 +512,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_edit_2511_bf16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors",
-    "size_bytes": 40855876403,
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "group": "qwen",
-    "notes": "Required by Image Edit (Qwen 2511)"
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "detection",
@@ -544,19 +535,17 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "flux1-fill-dev.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/split_files/diffusion_models/flux1-fill-dev.safetensors",
-    "size_bytes": 23804856238,
+    "filename": "flux1-fill-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/Flux-1-Fill-dev-GGUF/resolve/main/flux1-fill-dev-Q4_K_S.gguf",
     "group": "flux",
-    "notes": "Required by Image Inpainting (Flux.1 Fill Dev)"
+    "notes": "FLUX.1 Fill Dev Q4_K_S GGUF (~7 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_fp8_e4m3fn.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_fp8_e4m3fn.safetensors",
-    "size_bytes": 20433306910,
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "group": "qwen",
-    "notes": "Required by Image Inpainting (Qwen-image)"
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "controlnet",
@@ -600,11 +589,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_layered_bf16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Layered_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_layered_bf16.safetensors",
-    "size_bytes": 40855876403,
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "group": "qwen",
-    "notes": "Required by Image to Layers(Qwen-Image-Layered)"
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "checkpoints",
@@ -631,12 +619,11 @@
     "notes": "Required by Image to Pose Map (SDPose Multi-Person)"
   },
   {
-    "category": "checkpoints",
-    "filename": "ltx-2.3-22b-dev-fp8.safetensors",
-    "url": "https://huggingface.co/Lightricks/LTX-2.3-fp8/resolve/main/ltx-2.3-22b-dev-fp8.safetensors",
-    "size_bytes": 29141353103,
+    "category": "diffusion_models",
+    "filename": "LTX-2.3-Dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/LTX-2.3-Dev-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Image to Video (LTX-2.3)"
+    "notes": "LTX-2.3 Dev Q4_K_S GGUF (~8.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -664,19 +651,17 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-    "size_bytes": 14291503677,
+    "filename": "wan2.2-i2v-14b-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/Wan2.1-I2V-14B-480P-gguf/resolve/main/wan2.1-i2v-14b-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Image to Video (Wan 2.2)"
+    "notes": "Wan 2.2 I2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
-    "size_bytes": 14291503677,
+    "filename": "wan2.2-i2v-14b-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/Wan2.1-I2V-14B-480P-gguf/resolve/main/wan2.1-i2v-14b-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Image to Video (Wan 2.2)"
+    "notes": "Wan 2.2 I2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -760,11 +745,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "ernie-image-turbo.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image-turbo.safetensors",
-    "size_bytes": 16063177687,
+    "filename": "ernie-image-turbo-fp8.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image-turbo-fp8.safetensors",
     "group": "other",
-    "notes": "Required by Text to Image (Ernie Image Turbo)"
+    "notes": "ERNIE Image Turbo FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "text_encoders",
@@ -784,19 +768,17 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "ernie-image.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image.safetensors",
-    "size_bytes": 16063177687,
+    "filename": "ernie-image-turbo-fp8.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image-turbo-fp8.safetensors",
     "group": "other",
-    "notes": "Required by Text to Image (Ernie Image)"
+    "notes": "ERNIE Image Turbo FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "flux1-dev.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev.safetensors",
-    "size_bytes": 23804856238,
+    "filename": "flux1-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q4_K_S.gguf",
     "group": "flux",
-    "notes": "Required by Text to Image (Flux.1 Dev)"
+    "notes": "FLUX.1 Dev Q4_K_S GGUF (~7 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
@@ -816,11 +798,10 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_2512_fp8_e4m3fn.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors",
-    "size_bytes": 20433306910,
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "group": "qwen",
-    "notes": "Required by Text to Image (Qwen-Image 2512)"
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -840,27 +821,24 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "z_image_bf16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/z_image/resolve/main/split_files/diffusion_models/z_image_bf16.safetensors",
-    "size_bytes": 12305081303,
-    "group": "other",
-    "notes": "Required by Text to Image (Z-Image-Base)"
+    "filename": "qwen2.5_vl_7b_fp8_scaled.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "group": "qwen",
+    "notes": "Qwen 2.5 VL 7B FP8 (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
-    "size_bytes": 14291503677,
+    "filename": "wan2.2-t2v-14b-Q4_K_S.gguf",
+    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2-t2v-14b-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Text to Video (Wan 2.2)"
+    "notes": "Wan 2.2 T2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
-    "size_bytes": 14291503677,
+    "filename": "wan2.2-t2v-14b-Q4_K_S.gguf",
+    "url": "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/wan2.2-t2v-14b-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Text to Video (Wan 2.2)"
+    "notes": "Wan 2.2 T2V 14B Q4_K_S GGUF (~9.2 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -920,10 +898,9 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "wan2.1_vace_14B_fp16.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_vace_14B_fp16.safetensors",
-    "size_bytes": 34671123496,
+    "filename": "wan2.1-t2v-14b-Q4_K_S.gguf",
+    "url": "https://huggingface.co/city96/Wan2.1-T2V-14B-GGUF/resolve/main/wan2.1-t2v-14b-Q4_K_S.gguf",
     "group": "video",
-    "notes": "Required by Video Inpainting (Wan2.1 VACE)"
+    "notes": "Wan 2.1 14B Q4_K_S GGUF (~8.5 GB - optimized for 16GB VRAM)"
   }
 ]

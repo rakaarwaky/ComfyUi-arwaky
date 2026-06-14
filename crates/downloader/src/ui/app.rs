@@ -289,78 +289,96 @@ impl App {
             self.selected_indices.clone()
         };
 
+        let models_to_refresh: Vec<(usize, Model)> = indices
+            .iter()
+            .filter_map(|&idx| self.models.get(idx).map(|m| (idx, m.clone())))
+            .collect();
+
+        if models_to_refresh.is_empty() {
+            return;
+        }
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.rx = Some(rx);
         let config = self.config.clone();
-        let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
-        let agent = ureq::Agent::new_with_config(
-            ureq::config::Config::builder()
-                .timeout_connect(Some(std::time::Duration::from_secs(10)))
-                .timeout_global(Some(std::time::Duration::from_secs(10)))
-                .build(),
-        );
 
-        let mut valid = 0usize;
-        let mut invalid = 0usize;
-        let mut unknown_size = 0usize;
+        self.add_log(&format!("Refreshing metadata for {} models...", models_to_refresh.len()));
 
-        for idx in indices {
-            let Some(model) = self.models.get(idx).cloned() else {
-                continue;
-            };
+        std::thread::spawn(move || {
+            let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+            let agent = ureq::Agent::new_with_config(
+                ureq::config::Config::builder()
+                    .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                    .timeout_global(Some(std::time::Duration::from_secs(15)))
+                    .build(),
+            );
 
-            let mut req = agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
-            if let Some(t) = &token {
-                req = req.header("Authorization", &format!("Bearer {}", t));
-            }
+            let mut valid = 0usize;
+            let mut invalid = 0usize;
+            let mut unknown_size = 0usize;
 
-            match req.call() {
-                Ok(res) => {
+            for (idx, model) in models_to_refresh {
+                let mut size = 0u64;
+                let mut success = false;
+
+                // Try HEAD first
+                let mut req = agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
+                if let Some(ref t) = token {
+                    req = req.header("Authorization", &format!("Bearer {}", t));
+                }
+
+                if let Ok(res) = req.call() {
                     let status = res.status().as_u16();
                     if status == 200 || status == 206 {
-                        let size = res
+                        size = res
                             .headers()
                             .get("Content-Length")
                             .and_then(|v| v.to_str().ok())
                             .and_then(|v| v.parse::<u64>().ok())
                             .unwrap_or(0);
-
-                        if size > 0 {
-                            self.models[idx].size_bytes = size;
-                            if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
-                                cache.sizes.insert(model.url.clone(), size);
-                                cache.save();
-                            }
-                            valid += 1;
-                            self.add_log(&format!(
-                                "Refreshed size for {}: {}",
-                                model.filename,
-                                format_size(size)
-                            ));
-                        } else {
-                            unknown_size += 1;
-                            self.add_log(&format!(
-                                "Valid link for {}, but size is unknown.",
-                                model.filename
-                            ));
-                        }
-                    } else {
-                        invalid += 1;
-                        self.add_log(&format!(
-                            "Invalid link for {} (HTTP {}).",
-                            model.filename, status
-                        ));
+                        if size > 0 { success = true; }
                     }
                 }
-                Err(e) => {
+
+                // If HEAD failed or size is 0, try a small GET (some CDNs/gateways require this)
+                if !success {
+                    let mut req = agent.get(&model.url)
+                        .header("User-Agent", "Mozilla/5.0")
+                        .header("Range", "bytes=0-0");
+                    if let Some(ref t) = token {
+                        req = req.header("Authorization", &format!("Bearer {}", t));
+                    }
+                    if let Ok(res) = req.call() {
+                        let status = res.status().as_u16();
+                        if status == 200 || status == 206 {
+                            // If it's 206, look for Content-Range
+                            if let Some(range) = res.headers().get("Content-Range").and_then(|v| v.to_str().ok()) {
+                                if let Some(total) = range.split('/').last().and_then(|s| s.parse::<u64>().ok()) {
+                                    size = total;
+                                    success = true;
+                                }
+                            }
+                            // Fallback to Content-Length if it was a 200 (though we asked for range)
+                            if !success {
+                                size = res.headers().get("Content-Length").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+                                if size > 0 { success = true; }
+                            }
+                        }
+                    }
+                }
+
+                if success && size > 0 {
+                    let _ = tx.send(DownloadEvent::RefreshUpdate { idx, size });
+                    valid += 1;
+                } else if success {
+                    unknown_size += 1;
+                } else {
                     invalid += 1;
-                    self.add_log(&format!("Invalid link for {}: {}", model.filename, e));
                 }
             }
-        }
 
-        self.add_log(&format!(
-            "Refresh complete: {} valid, {} invalid, {} unknown size.",
-            valid, invalid, unknown_size
-        ));
+            let _ = tx.send(DownloadEvent::RefreshFinished { valid, invalid, unknown: unknown_size });
+        });
     }
 
     pub fn start_download(&mut self) {
@@ -609,6 +627,27 @@ impl App {
                     self.selected_indices.clear();
                     should_clear_rx = true;
                 }
+                DownloadEvent::RefreshUpdate { idx, size } => {
+                    let mut filename = String::new();
+                    if let Some(m) = self.models.get_mut(idx) {
+                        m.size_bytes = size;
+                        filename = m.filename.clone();
+                        if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
+                            cache.sizes.insert(m.url.clone(), size);
+                            cache.save();
+                        }
+                    }
+                    if !filename.is_empty() {
+                        self.add_log(&format!("Refreshed size for {}: {}", filename, format_size(size)));
+                    }
+                }
+                DownloadEvent::RefreshFinished { valid, invalid, unknown } => {
+                    self.add_log(&format!(
+                        "Refresh complete: {} valid, {} invalid, {} unknown size.",
+                        valid, invalid, unknown
+                    ));
+                    should_clear_rx = true;
+                }
             }
         }
 
@@ -636,8 +675,11 @@ pub fn download_one_model(
     cancel_token: &Arc<AtomicBool>,
     tx: &std::sync::mpsc::Sender<DownloadEvent>,
 ) -> Result<(), String> {
+    use crate::utils::{sanitize_filename, verify_sha256};
+    
+    let sanitized_filename = sanitize_filename(&model.filename);
     let dest_dir = config.resolve_category_dir(&model.category);
-    let dest_path = dest_dir.join(&model.filename);
+    let dest_path = dest_dir.join(&sanitized_filename);
 
     if model.category == "diffusers" {
         return download_diffusers_bg(&dest_path);
@@ -645,7 +687,7 @@ pub fn download_one_model(
 
     let temp_dir = PathBuf::from(&config.models_dir).join(".download_tmp");
     fs::create_dir_all(&temp_dir).map_err(|e| e.to_string())?;
-    let temp_path = temp_dir.join(format!("{}.tmp", model.filename));
+    let temp_path = temp_dir.join(format!("{}.tmp", sanitized_filename));
 
     let mut current_size = 0;
     if temp_path.exists() {
@@ -771,9 +813,27 @@ pub fn download_one_model(
 
     if total_size > 0 {
         let actual_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
-        let min_allowed = (total_size as f64 * 0.95) as u64;
-        if actual_size < min_allowed {
-            return Err("File size checks failed".to_string());
+        let diff = if actual_size > total_size { actual_size - total_size } else { total_size - actual_size };
+        let allowed_diff = (total_size / 100).min(1024 * 1024); // 1% or 1MB
+        if diff > allowed_diff {
+            return Err(format!("Size mismatch: expected {}, got {}", total_size, actual_size));
+        }
+    }
+
+    // SHA256 Verification
+    if let Some(ref expected_hash) = model.sha256 {
+        let _ = tx.send(DownloadEvent::Progress {
+            worker_id,
+            filename: model.filename.clone(),
+            downloaded: total_size,
+            total: total_size,
+            speed_mb_s: 0.0,
+            eta_secs: 0,
+        }); // Update UI to show verification phase
+        
+        if !verify_sha256(&temp_path, expected_hash) {
+            let _ = fs::remove_file(&temp_path);
+            return Err("SHA256 integrity check failed!".to_string());
         }
     }
 
@@ -802,9 +862,8 @@ pub(super) fn get_time_str() -> String {
     unsafe {
         let mut raw_time: libc::time_t = 0;
         libc::time(&mut raw_time);
-        let tm_ptr = libc::localtime(&raw_time);
-        if !tm_ptr.is_null() {
-            let tm = *tm_ptr;
+        let mut tm = std::mem::zeroed::<libc::tm>();
+        if !libc::localtime_r(&raw_time, &mut tm).is_null() {
             format!("{:02}:{:02}:{:02}", tm.tm_hour, tm.tm_min, tm.tm_sec)
         } else {
             "00:00:00".to_string()

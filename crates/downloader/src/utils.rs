@@ -72,19 +72,19 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
     if path.is_file() {
         if let Ok(metadata) = fs::metadata(path) {
             let actual_size = metadata.len();
-            let is_valid = |expected: u64| -> bool {
-                if expected <= 1_000_000 {
-                    actual_size >= 1000
-                } else {
-                    let min_allowed = (expected as f64 * 0.95) as u64;
-                    actual_size >= min_allowed
-                }
+            
+            // Stricter size validation: must match within 1% or 1MB, whichever is smaller
+            let is_size_valid = |expected: u64| -> bool {
+                if expected == 0 { return actual_size >= 1000; }
+                let diff = if actual_size > expected { actual_size - expected } else { expected - actual_size };
+                let allowed_diff = (expected / 100).min(1024 * 1024); // 1% or 1MB
+                diff <= allowed_diff
             };
 
             if let Some(url_str) = url {
                 if let Ok(cache) = SIZE_CACHE.read() {
                     if let Some(&cached_size) = cache.sizes.get(url_str) {
-                        if is_valid(cached_size) {
+                        if is_size_valid(cached_size) {
                             return true;
                         }
                     }
@@ -95,7 +95,7 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
                 return actual_size >= 1000;
             }
 
-            if is_valid(expected_size) {
+            if is_size_valid(expected_size) {
                 return true;
             }
         }
@@ -105,6 +105,38 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
         }
     }
     false
+}
+
+pub fn verify_sha256(path: &Path, expected_hex: &str) -> bool {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let mut file = match fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return false,
+    };
+
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    loop {
+        match file.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => hasher.update(&buffer[..n]),
+            Err(_) => return false,
+        }
+    }
+
+    let hash = hasher.finalize();
+    let hex_hash = hex::encode(hash);
+    hex_hash.eq_ignore_ascii_case(expected_hex)
+}
+
+pub fn sanitize_filename(filename: &str) -> String {
+    filename
+        .chars()
+        .filter(|&c| c.is_alphanumeric() || c == '.' || c == '_' || c == '-')
+        .collect::<String>()
+        .replace("..", ".")
 }
 
 pub fn get_available_space(path: &Path) -> std::io::Result<u64> {

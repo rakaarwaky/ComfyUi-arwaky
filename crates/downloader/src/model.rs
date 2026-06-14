@@ -7,6 +7,7 @@ pub struct Model {
     pub url: String,
     #[serde(default)]
     pub size_bytes: u64,
+    pub sha256: Option<String>,
     pub group: String,
     pub notes: String,
 }

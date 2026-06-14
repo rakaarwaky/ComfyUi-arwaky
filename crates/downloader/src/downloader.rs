@@ -25,6 +25,15 @@ pub enum DownloadEvent {
         completed: usize,
         failed: usize,
     },
+    RefreshUpdate {
+        idx: usize,
+        size: u64,
+    },
+    RefreshFinished {
+        valid: usize,
+        invalid: usize,
+        unknown: usize,
+    },
 }
 
 pub fn download_diffusers_bg(diffusers_dir: &Path) -> Result<(), String> {

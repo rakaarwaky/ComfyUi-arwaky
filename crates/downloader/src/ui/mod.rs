@@ -41,32 +41,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let dest_dir = config.resolve_category_dir(&m.category);
                 let dest_path = dest_dir.join(&m.filename);
                 if dest_path.is_file() {
-                    let needs_verification = {
-                        let actual_size =
-                            fs::metadata(&dest_path).map(|meta| meta.len()).unwrap_or(0);
-                        if actual_size > 0 {
-                            let is_standard_valid = if m.size_bytes <= 1_000_000 {
-                                actual_size >= 1000
-                            } else {
-                                let min_allowed = (m.size_bytes as f64 * 0.95) as u64;
-                                actual_size >= min_allowed
-                            };
-
-                            if !is_standard_valid || m.size_bytes == 0 {
-                                let has_cached = if let Ok(cache) = crate::utils::SIZE_CACHE.read()
-                                {
-                                    cache.sizes.contains_key(&m.url)
-                                } else {
-                                    false
-                                };
-                                !has_cached
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    };
+                    let needs_verification = !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
 
                     if needs_verification {
                         let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
