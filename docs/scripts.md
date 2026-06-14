@@ -73,7 +73,7 @@ A pre-commit validation script that verifies code quality and formatting before 
   3. **`cargo clippy`**: Analyzes the codebase for common lints and warnings.
   4. **`cargo test`**: Runs unit tests.
   5. **`shellcheck`**: Validates all shell scripts in the `scripts/` directory.
-  6. **Configuration Check**: Runs a Python parser checks on `src-tauri/tauri.conf.json` to verify valid JSON formatting.
+  6. **Configuration Check**: Runs a Python parser checks on `crates/launcher/tauri.conf.json` to verify valid JSON formatting.
   7. **`cargo-audit`**: Checks the Rust dependency tree against known vulnerability databases (skipped if cargo-audit is not installed).
 
 ---
@@ -87,7 +87,7 @@ Bumps the application version across the backend manifests, Tauri configurations
   scripts/bump-version.sh <new-version> [options]
   ```
 * **Options**:
-  - `--backend <version>`: Additionally updates the const `BACKEND_VERSION` inside `src-tauri/src/downloader.rs` to match the target release.
+  - `--backend <version>`: Additionally updates the const `BACKEND_VERSION` inside `crates/launcher/src/downloader.rs` to match the target release.
   - `--tag`: Commits all changed manifest files and creates a git tag pointing to `v<new-version>`.
 * **Example**:
   ```bash

@@ -19,7 +19,7 @@ jobs:
       options: --user root
     defaults:
       run:
-        working-directory: src-tauri
+        working-directory: crates/launcher
 
     steps:
       - uses: actions/checkout@v6
@@ -93,18 +93,18 @@ jobs:
         run: dnf install -y jq
 
       - name: Validate tauri.conf.json
-        run: jq empty src-tauri/tauri.conf.json && echo "Valid"
+        run: jq empty crates/launcher/tauri.conf.json && echo "Valid"
 
       - name: Validate Cargo.toml
         run: |
-          cd src-tauri
+          cd crates/launcher
           cargo metadata --format-version=1 > /dev/null && echo "Valid"
 
       - name: Check required files
         run: |
           for file in README.md LICENSE CONTRIBUTING.md \
-            src-tauri/Cargo.toml src-tauri/tauri.conf.json \
-            src-tauri/src/main.rs src-tauri/src/lib.rs src-tauri/src/downloader.rs; do
+            crates/launcher/Cargo.toml crates/launcher/tauri.conf.json \
+            crates/launcher/src/main.rs crates/launcher/src/lib.rs crates/launcher/src/downloader.rs; do
             [ -f "$file" ] && echo "OK $file" || { echo "MISSING $file"; exit 1; }
           done
 
@@ -122,4 +122,4 @@ jobs:
 
       - name: Run cargo-audit
         run: cargo audit
-        working-directory: src-tauri
+        working-directory: crates/launcher

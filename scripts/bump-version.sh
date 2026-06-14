@@ -58,27 +58,27 @@ if [[ ! "$NEW_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
   exit 1
 fi
 
-if [[ ! -f src-tauri/Cargo.toml ]]; then
-  echo "❌ src-tauri/Cargo.toml not found. Run from project root."
+if [[ ! -f crates/launcher/Cargo.toml ]]; then
+  echo "❌ crates/launcher/Cargo.toml not found. Run from project root."
   exit 1
 fi
 
 echo "=== Bumping app version to $NEW_VER ==="
 
 # 1. Cargo.toml (sed-based, no cargo-edit dependency)
-echo "[1/3] Updating src-tauri/Cargo.toml..."
-if ! sed -i "s/^version = \"[^\"]*\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml; then
+echo "[1/3] Updating crates/launcher/Cargo.toml..."
+if ! sed -i "s/^version = \"[^\"]*\"/version = \"$NEW_VER\"/" crates/launcher/Cargo.toml; then
   echo "❌ Failed to update Cargo.toml"
   exit 1
 fi
-if [ -f src-tauri/Cargo.lock ]; then
+if [ -f crates/launcher/Cargo.lock ]; then
   sed -i "0,/^name = \"app\"$/{
     /^name = \"app\"$/,/^version = \"[^\"]*\"$/{
       s/^version = \"[^\"]*\"$/version = \"$NEW_VER\"/
     }
-  }" src-tauri/Cargo.lock
+  }" crates/launcher/Cargo.lock
 fi
-ACTUAL_VER=$(grep -m1 '^version' src-tauri/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+ACTUAL_VER=$(grep -m1 '^version' crates/launcher/Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
 if [ "$ACTUAL_VER" != "$NEW_VER" ]; then
   echo "❌ Version update failed. Expected $NEW_VER, got $ACTUAL_VER"
   exit 1
@@ -86,21 +86,21 @@ fi
 echo "  ✅ Cargo.toml version: $NEW_VER"
 
 # 2. tauri.conf.json
-echo "[2/3] Updating src-tauri/tauri.conf.json..."
+echo "[2/3] Updating crates/launcher/tauri.conf.json..."
 if command -v jq &>/dev/null; then
   tmp=$(mktemp)
-  jq --arg v "$NEW_VER" '.version = $v' src-tauri/tauri.conf.json > "$tmp" \
-    && mv "$tmp" src-tauri/tauri.conf.json \
+  jq --arg v "$NEW_VER" '.version = $v' crates/launcher/tauri.conf.json > "$tmp" \
+    && mv "$tmp" crates/launcher/tauri.conf.json \
     && echo "  ✅ tauri.conf.json version: $NEW_VER"
 else
-  sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VER\"/" src-tauri/tauri.conf.json
+  sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VER\"/" crates/launcher/tauri.conf.json
   echo "  ✅ tauri.conf.json version: $NEW_VER (sed fallback, install jq for better parsing)"
 fi
 
 # 3. BACKEND_VERSION (optional)
 if [[ -n "$BACKEND" ]]; then
   echo "[3/3] Updating BACKEND_VERSION to $BACKEND in downloader.rs..."
-  sed -i "s/^const BACKEND_VERSION: \&str = \".*\";/const BACKEND_VERSION: \&str = \"$BACKEND\";/" src-tauri/src/downloader.rs
+  sed -i "s/^const BACKEND_VERSION: \&str = \".*\";/const BACKEND_VERSION: \&str = \"$BACKEND\";/" crates/launcher/src/downloader.rs
 else
   echo "[3/3] Skipped (no --backend)"
 fi
@@ -108,9 +108,9 @@ fi
 # 4. Git tag (optional)
 if $TAG; then
   echo "Creating git tag v$NEW_VER..."
-  git add src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json src-tauri/tauri.conf.json
+  git add crates/launcher/Cargo.toml crates/launcher/Cargo.lock crates/launcher/tauri.conf.json crates/launcher/tauri.conf.json
   if [[ -n "$BACKEND" ]]; then
-    git add src-tauri/src/downloader.rs
+    git add crates/launcher/src/downloader.rs
   fi
   git commit -m "chore: bump version to $NEW_VER"
   git tag "v$NEW_VER"

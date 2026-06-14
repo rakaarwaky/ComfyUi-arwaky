@@ -51,7 +51,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            src-tauri/target/
+            crates/launcher/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Tauri CLI
@@ -59,12 +59,12 @@ jobs:
 
       - name: Build Tauri app
         run: |
-          cd src-tauri
+          cd crates/launcher
           tauri build
 
       - name: List build artifacts
         run: |
-          find src-tauri/target/release/bundle -type f \
+          find crates/launcher/target/release/bundle -type f \
             \( -name "*.AppImage" -o -name "*.rpm" \) \
             -exec ls -lh {} \;
 
@@ -72,13 +72,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          path: crates/launcher/target/release/bundle/appimage/*.AppImage
 
       - name: Upload RPM
         uses: actions/upload-artifact@v7
         with:
           name: rpm
-          path: src-tauri/target/release/bundle/rpm/*.rpm
+          path: crates/launcher/target/release/bundle/rpm/*.rpm
 
   release:
     name: Create GitHub Release

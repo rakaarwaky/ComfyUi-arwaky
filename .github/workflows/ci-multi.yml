@@ -40,20 +40,20 @@ jobs:
             ~/.cargo/bin/
             ~/.cargo/registry/
             ~/.cargo/git/
-            src-tauri/target/
+            crates/launcher/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo fmt
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+        run: cargo fmt --manifest-path crates/launcher/Cargo.toml --all -- --check
 
       - name: cargo check
-        run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
+        run: cargo check --manifest-path crates/launcher/Cargo.toml --all-targets
 
       - name: cargo clippy
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path crates/launcher/Cargo.toml --all-targets -- -D warnings
 
       - name: cargo test
-        run: cargo test --manifest-path src-tauri/Cargo.toml --all-features
+        run: cargo test --manifest-path crates/launcher/Cargo.toml --all-features
 
       - name: shellcheck scripts
         run: |
@@ -61,7 +61,7 @@ jobs:
             xargs -0 shellcheck --severity=warning
 
       - name: Validate tauri.conf.json
-        run: jq empty src-tauri/tauri.conf.json
+        run: jq empty crates/launcher/tauri.conf.json
 
   # ==========================================================================
   # Stage 2: Build on Fedora distros
@@ -124,7 +124,7 @@ jobs:
             .cargo/bin/
             .cargo/registry/
             .cargo/git/
-            src-tauri/target/
+            crates/launcher/target/
           key: ${{ matrix.distro }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ matrix.distro }}-cargo-
@@ -135,7 +135,7 @@ jobs:
       - name: Build Tauri app
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          cd src-tauri
+          cd crates/launcher
           tauri build
         env:
           CARGO_HOME: ${{ github.workspace }}/.cargo
@@ -144,19 +144,19 @@ jobs:
       - name: List build artifacts
         run: |
           echo "=== Bundle outputs ==="
-          find src-tauri/target/release/bundle -type f \
+          find crates/launcher/target/release/bundle -type f \
             \( -name "*.AppImage" -o -name "*.rpm" \) \
             -exec ls -lh {} \; 2>/dev/null || echo "No bundles found"
           echo ""
           echo "=== Binary ==="
-          ls -lh src-tauri/target/release/app 2>/dev/null || echo "Binary not found"
+          ls -lh crates/launcher/target/release/app 2>/dev/null || echo "Binary not found"
 
       - name: Upload AppImage (${{ matrix.distro }})
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: appimage-${{ matrix.distro }}
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          path: crates/launcher/target/release/bundle/appimage/*.AppImage
           if-no-files-found: ignore
           retention-days: 14
 
@@ -165,7 +165,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: rpm-${{ matrix.distro }}
-          path: src-tauri/target/release/bundle/rpm/*.rpm
+          path: crates/launcher/target/release/bundle/rpm/*.rpm
           if-no-files-found: ignore
           retention-days: 14
 

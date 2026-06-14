@@ -459,7 +459,7 @@ async function publicDir() {
  * - **Linux:** When running in an AppImage, the `APPDIR` variable will be set to
  *   the mounted location of the app, and the resource dir will be `${APPDIR}/usr/lib/${exe_name}`.
  *   If not running in an AppImage, the path is `/usr/lib/${exe_name}`.
- *   When running the app from `src-tauri/target/(debug|release)/`, the path is `${exe_dir}/../lib/${exe_name}`.
+ *   When running the app from `crates/launcher/target/(debug|release)/`, the path is `${exe_dir}/../lib/${exe_name}`.
  * - **macOS:** Resolves to `${exe_dir}/../Resources` (inside .app).
  * - **iOS:** Resolves to `${exe_dir}/assets`.
  * - **Android:** Currently the resources are stored in the APK as assets so it's not a normal file system path,

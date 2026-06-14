@@ -81,15 +81,15 @@ bash scripts/build.sh
 
 ### Rust Backend
 
-All Rust code resides inside the `src-tauri/` folder. Please adhere to the following formatting and compiler standards:
+All Rust code resides inside the `crates/launcher/` folder. Please adhere to the following formatting and compiler standards:
 
 * **Formatting**: Ensure your code is properly formatted before staging changes:
   ```bash
-  cargo fmt --manifest-path src-tauri/Cargo.toml --check
+  cargo fmt --manifest-path crates/launcher/Cargo.toml --check
   ```
 * **Lints**: All warnings must be resolved. Do not commit code that produces compiler warnings. Run the standard linter:
   ```bash
-  cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+  cargo clippy --manifest-path crates/launcher/Cargo.toml -- -D warnings
   ```
 * **Concurrence & Safety**:
   - Prefer using bounded, non-blocking operations for channel communications. Use `try_send` instead of blocking `send` inside background thread readers to prevent thread locks.
@@ -104,7 +104,7 @@ All Rust code resides inside the `src-tauri/` folder. Please adhere to the follo
 
 ### Splash Screen Frontend
 
-The splash screen frontend resides in `src-tauri/assets/ui/`.
+The splash screen frontend resides in `crates/launcher/assets/ui/`.
 * Write clean, semantic HTML5 structure.
 * Keep styling inside `styles.css` utilizing css custom variables.
 * Javascript logic should avoid bloated frameworks where possible; keep it lightweight, fast, and structured inside `main.js`.
@@ -191,9 +191,9 @@ We manage project versions systematically using custom scripts. If you are prepa
    bash scripts/bump-version.sh 0.2.0 --backend 1.0.0
    ```
 2. The script updates:
-   - App version in `src-tauri/Cargo.toml`
-   - Version mapping in `src-tauri/tauri.conf.json`
-   - Downloader version constraints in `src-tauri/src/downloader.rs`
+   - App version in `crates/launcher/Cargo.toml`
+   - Version mapping in `crates/launcher/tauri.conf.json`
+   - Downloader version constraints in `crates/launcher/src/downloader.rs`
 3. Optional: Pass `--tag` to automatically create a git tag and commit the updates.
 
 ---

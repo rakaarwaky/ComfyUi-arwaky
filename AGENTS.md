@@ -4,13 +4,13 @@
 
 ComfyUI-arwaky is a Tauri v2 desktop wrapper for ComfyUI, targeting **Fedora Linux with AMD ROCm GPUs**. It auto-detects GPU hardware, manages a Python backend process with clean lifecycle shutdown, and provides a splash-screen launcher. Written in Rust (Tauri) with a bash-based toolchain.
 
-## Critical: `src-tauri/` vs `crates/launcher/`
-
-**All CI workflows (`ci.yml`, `ci-multi.yml`, `release.yml`) and scripts (`ci-local.sh`, `bump-version.sh`) reference `src-tauri/` as the Rust crate path.** The actual Rust code lives in `crates/launcher/`. If `src-tauri/` doesn't exist, those scripts and CI jobs will fail. This is the most common source of confusion in this repo.
+## Project structure
 
 - `crates/launcher/` — Tauri v2 app (Rust backend + splash HTML/CSS/JS)
 - `crates/downloader/` — Standalone TUI model downloader (separate Rust binary)
 - `ComfyUI/` — Git submodule of upstream ComfyUI Python backend
+
+All CI workflows, scripts, and docs reference `crates/launcher/` as the Rust crate path.
 
 ## Development commands
 
