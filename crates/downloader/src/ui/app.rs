@@ -691,6 +691,7 @@ impl App {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct ChunkProgress {
     total_size: u64,
+    #[serde(default)]
     n_chunks: usize,
     chunk_offsets: Vec<u64>,
 }
@@ -823,8 +824,8 @@ pub fn download_one_model(
             if let Ok(content) = fs::read_to_string(&progress_path) {
                 if let Ok(p) = serde_json::from_str::<ChunkProgress>(&content) {
                     if p.total_size == total_size
-                        && p.n_chunks == n_chunks
                         && p.chunk_offsets.len() == n_chunks
+                        && (p.n_chunks == n_chunks || p.n_chunks == 0)
                     {
                         chunk_offsets = p.chunk_offsets;
                     }
