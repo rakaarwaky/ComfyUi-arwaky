@@ -107,9 +107,24 @@ impl App {
 
     pub fn add_log(&mut self, msg: &str) {
         let timestamp = get_time_str();
-        self.logs.push(format!("[{}] {}", timestamp, msg));
+        let log_line = format!("[{}] {}", timestamp, msg);
+        self.logs.push(log_line.clone());
         if self.logs.len() > 100 {
             self.logs.remove(0);
+        }
+
+        if let Some(path) = crate::utils::SizeCache::cache_path() {
+            if let Some(parent) = path.parent() {
+                let _ = fs::create_dir_all(parent);
+                let log_file_path = parent.join("downloader.log");
+                if let Ok(mut file) = fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(log_file_path)
+                {
+                    let _ = writeln!(file, "{}", log_line);
+                }
+            }
         }
     }
 
@@ -143,12 +158,12 @@ impl App {
                     5 => {
                         let dest_dir = self.config.resolve_category_dir(&m.category);
                         let dest_path = dest_dir.join(&m.filename);
-                        !file_exists_valid(&dest_path, m.size_bytes)
+                        !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
                     }
                     6 => {
                         let dest_dir = self.config.resolve_category_dir(&m.category);
                         let dest_path = dest_dir.join(&m.filename);
-                        file_exists_valid(&dest_path, m.size_bytes)
+                        file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
                     }
                     _ => true,
                 };
@@ -192,7 +207,7 @@ impl App {
         for (i, m) in self.models.iter().enumerate() {
             let dest_dir = self.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            let exists = file_exists_valid(&dest_path, m.size_bytes);
+            let exists = file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
             if !exists {
                 if let Some(grp) = group {
                     if m.group == grp {
@@ -213,7 +228,7 @@ impl App {
         for (orig_idx, m) in filtered {
             let dest_dir = self.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            if !file_exists_valid(&dest_path, m.size_bytes) {
+            if !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url)) {
                 if !self.selected_indices.contains(&orig_idx) {
                     self.selected_indices.push(orig_idx);
                     count += 1;
@@ -234,7 +249,7 @@ impl App {
             let m = &self.models[idx];
             let dest_dir = self.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            if !file_exists_valid(&dest_path, m.size_bytes) {
+            if !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url)) {
                 required_space += m.size_bytes;
             }
         }
@@ -322,6 +337,7 @@ impl App {
                         });
 
                         let mut success = false;
+                        let mut last_error = None;
                         for attempt in 1..=3 {
                             if cancel_token.load(Ordering::Acquire) {
                                 break;
@@ -330,9 +346,11 @@ impl App {
                             match download_one_model(worker_id, &model, &config, &cancel_token, &tx) {
                                 Ok(_) => {
                                     success = true;
+                                    last_error = None;
                                     break;
                                 }
-                                Err(_) => {
+                                Err(e) => {
+                                    last_error = Some(e);
                                     if cancel_token.load(Ordering::Acquire) {
                                         break;
                                     }
@@ -345,6 +363,7 @@ impl App {
                             worker_id,
                             filename: model.filename.clone(),
                             success,
+                            error_msg: last_error,
                         });
 
                         if success {
@@ -428,11 +447,13 @@ impl App {
                     worker_id,
                     filename,
                     success,
+                    error_msg,
                 } => {
                     if success {
                         self.add_log(&format!("Worker #{}: Finished {}", worker_id + 1, filename));
                     } else {
-                        self.add_log(&format!("Worker #{}: Failed to download {}", worker_id + 1, filename));
+                        let err_suffix = error_msg.as_ref().map(|e| format!(": {}", e)).unwrap_or_default();
+                        self.add_log(&format!("Worker #{}: Failed to download {}{}", worker_id + 1, filename, err_suffix));
                     }
                     if let AppState::Downloading {
                         ref mut active_downloads,
@@ -518,6 +539,15 @@ fn download_one_model(
     let response = req.call().map_err(|e| e.to_string())?;
 
     let status_code = response.status().as_u16();
+    if status_code != 200 && status_code != 206 {
+        let err_msg = match status_code {
+            401 => "HTTP 401: Unauthorized (Invalid/Gated token?)".to_string(),
+            403 => "HTTP 403: Forbidden (Check access rights)".to_string(),
+            404 => "HTTP 404: Not Found (Invalid URL/Model doesn't exist)".to_string(),
+            _ => format!("HTTP Error {}", status_code),
+        };
+        return Err(err_msg);
+    }
     let is_partial = status_code == 206;
 
     let response_len: u64 = response
@@ -618,12 +648,110 @@ fn download_one_model(
     fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
     fs::rename(&temp_path, &dest_path).map_err(|e| e.to_string())?;
 
+    if let Ok(metadata) = fs::metadata(&dest_path) {
+        if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
+            cache.sizes.insert(model.url.clone(), metadata.len());
+            cache.save();
+        }
+    }
+
     Ok(())
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config();
     let models = get_models();
+
+    // Spin up background size checking thread
+    {
+        let config = config.clone();
+        let models = models.clone();
+        std::thread::spawn(move || {
+            let agent = ureq::Agent::new_with_config(
+                ureq::config::Config::builder()
+                    .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                    .timeout_global(Some(std::time::Duration::from_secs(10)))
+                    .build(),
+            );
+
+            for m in models {
+                let dest_dir = config.resolve_category_dir(&m.category);
+                let dest_path = dest_dir.join(&m.filename);
+                if dest_path.is_file() {
+                    let needs_verification = {
+                        let actual_size = fs::metadata(&dest_path).map(|meta| meta.len()).unwrap_or(0);
+                        if actual_size > 0 {
+                            let is_standard_valid = if m.size_bytes <= 1_000_000 {
+                                actual_size >= 1000
+                            } else {
+                                let min_allowed = (m.size_bytes as f64 * 0.95) as u64;
+                                actual_size >= min_allowed
+                            };
+                            
+                            if !is_standard_valid || m.size_bytes == 0 {
+                                let has_cached = if let Ok(cache) = crate::utils::SIZE_CACHE.read() {
+                                    cache.sizes.contains_key(&m.url)
+                                } else {
+                                    false
+                                };
+                                !has_cached
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    };
+
+                    if needs_verification {
+                        let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+                        let mut req = agent.head(&m.url).header("User-Agent", "Mozilla/5.0");
+                        if let Some(t) = token {
+                            req = req.header("Authorization", &format!("Bearer {}", t));
+                        }
+
+                        if let Ok(res) = req.call() {
+                            let status = res.status().as_u16();
+                            if status == 200 || status == 206 {
+                                let response_len: u64 = res
+                                    .headers()
+                                    .get("Content-Length")
+                                    .and_then(|v| v.to_str().ok())
+                                    .and_then(|v| v.parse().ok())
+                                    .unwrap_or(0);
+                                
+                                if response_len > 0 {
+                                    if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
+                                        cache.sizes.insert(m.url.clone(), response_len);
+                                        cache.save();
+                                    }
+                                }
+                            } else {
+                                if let Some(path) = crate::utils::SizeCache::cache_path() {
+                                    if let Some(parent) = path.parent() {
+                                        let log_file_path = parent.join("downloader.log");
+                                        if let Ok(mut file) = fs::OpenOptions::new()
+                                            .create(true)
+                                            .append(true)
+                                            .open(log_file_path)
+                                        {
+                                            let timestamp = get_time_str();
+                                            let _ = writeln!(
+                                                file,
+                                                "[{}] Background check: Invalid URL for {} (Status: {})",
+                                                timestamp, m.filename, status
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                    }
+                }
+            }
+        });
+    }
 
     // Check CLI argument first
     let args: Vec<String> = std::env::args().collect();
@@ -634,11 +762,18 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 for m in &models {
                     let dest_dir = config.resolve_category_dir(&m.category);
                     let dest_path = dest_dir.join(&m.filename);
-                    let exists = file_exists_valid(&dest_path, m.size_bytes);
+                    let exists = file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
+                    let size = if m.size_bytes > 0 {
+                        m.size_bytes
+                    } else if let Ok(cache) = crate::utils::SIZE_CACHE.read() {
+                        *cache.sizes.get(&m.url).unwrap_or(&0)
+                    } else {
+                        0
+                    };
                     println!(
                         "{:<55} {:>12} {}",
                         format!("{}/{}", m.category, m.filename),
-                        format_size(m.size_bytes),
+                        format_size(size),
                         if exists { "\x1b[32m✓ READY\x1b[0m" } else { "\x1b[31m✗ MISSING\x1b[0m" }
                     );
                 }
@@ -646,7 +781,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             "--recommend" | "--rx6800xt" | "--amd" => {
                 println!("RX6800XT 16GB VRAM - Optimal Settings Guide\n");
-                println!("FLUX GGUF Recommended: flux1-dev-Q5_K_S.gguf");
+                println!("FLUX Dev (Text-to-Image) GGUF Recommended: flux1-dev-Q5_K_S.gguf (~8.3 GB)");
+                println!("FLUX Fill (Inpaint/Outpaint) GGUF Recommended: flux1-fill-dev-Q4_K_S.gguf (~12 GB)");
                 return Ok(());
             }
             _ => {}
@@ -958,7 +1094,7 @@ fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
         .map(|(orig_idx, m)| {
             let dest_dir = app.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            let exists = file_exists_valid(&dest_path, m.size_bytes);
+            let exists = file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
 
             let prefix = if app.selected_indices.contains(orig_idx) {
                 "[✔] "
@@ -972,13 +1108,21 @@ fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 Span::styled(" MISSING ", Style::default().bg(Color::Red).fg(Color::White))
             };
 
+            let size = if m.size_bytes > 0 {
+                m.size_bytes
+            } else if let Ok(cache) = crate::utils::SIZE_CACHE.read() {
+                *cache.sizes.get(&m.url).unwrap_or(&0)
+            } else {
+                0
+            };
+
             let text = Line::from(vec![
                 Span::raw(prefix),
                 Span::styled(
                     format!("{:<45}", format!("{}/{}", m.category, m.filename)),
                     Style::default().fg(if exists { Color::DarkGray } else { Color::White }),
                 ),
-                Span::raw(format!(" {:>10}  ", format_size(m.size_bytes))),
+                Span::raw(format!(" {:>10}  ", format_size(size))),
                 status_span,
             ]);
 
@@ -1007,14 +1151,22 @@ fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             let m = &filtered[selected].1;
             let dest_dir = app.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
-            let exists = file_exists_valid(&dest_path, m.size_bytes);
+            let exists = file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
+
+            let size = if m.size_bytes > 0 {
+                m.size_bytes
+            } else if let Ok(cache) = crate::utils::SIZE_CACHE.read() {
+                *cache.sizes.get(&m.url).unwrap_or(&0)
+            } else {
+                0
+            };
 
             format!(
                 "Filename: {}\nCategory: {}\nGroup: {}\nEstimated Size: {}\nStatus: {}\nNotes: {}\n\nURL: {}",
                 m.filename,
                 m.category,
                 m.group,
-                format_size(m.size_bytes),
+                format_size(size),
                 if exists { "✓ Installed" } else { "✗ Not Found" },
                 m.notes,
                 m.url

@@ -3,7 +3,7 @@ use std::path::Path;
 
 pub fn format_size(bytes: u64) -> String {
     if bytes == 0 {
-        return "~12 GiB".to_string();
+        return "Unknown".to_string();
     }
     const KB: u64 = 1024;
     const MB: u64 = 1024 * 1024;
@@ -19,33 +19,93 @@ pub fn format_size(bytes: u64) -> String {
     }
 }
 
-pub fn file_exists_valid(path: &Path, expected_size: u64) -> bool {
-    if !path.exists() {
-        return false;
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::sync::LazyLock;
+use std::path::PathBuf;
+
+pub struct SizeCache {
+    pub sizes: HashMap<String, u64>,
+}
+
+impl SizeCache {
+    pub fn cache_path() -> Option<PathBuf> {
+        std::env::var("HOME").ok().map(|home| {
+            PathBuf::from(home).join(".cache/comfyui-downloader/size_cache.json")
+        })
     }
-    if expected_size == 0 {
-        if path.is_dir() {
-            if let Ok(entries) = fs::read_dir(path) {
-                return entries.count() > 5;
+
+    pub fn load() -> Self {
+        if let Some(path) = Self::cache_path() {
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(path) {
+                    if let Ok(sizes) = serde_json::from_str(&content) {
+                        return SizeCache { sizes };
+                    }
+                }
             }
         }
-        return path.exists();
+        SizeCache {
+            sizes: HashMap::new(),
+        }
+    }
+
+    pub fn save(&self) {
+        if let Some(path) = Self::cache_path() {
+            if let Some(parent) = path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            if let Ok(content) = serde_json::to_string_pretty(&self.sizes) {
+                let _ = fs::write(path, content);
+            }
+        }
+    }
+}
+
+pub static SIZE_CACHE: LazyLock<RwLock<SizeCache>> = LazyLock::new(|| {
+    RwLock::new(SizeCache::load())
+});
+
+pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> bool {
+    if !path.exists() {
+        return false;
     }
     if path.is_file() {
         if let Ok(metadata) = fs::metadata(path) {
             let actual_size = metadata.len();
-            if expected_size <= 1_000_000 {
-                actual_size >= 1000
-            } else {
-                let min_allowed = (expected_size as f64 * 0.95) as u64;
-                actual_size >= min_allowed
+            let is_valid = |expected: u64| -> bool {
+                if expected <= 1_000_000 {
+                    actual_size >= 1000
+                } else {
+                    let min_allowed = (expected as f64 * 0.95) as u64;
+                    actual_size >= min_allowed
+                }
+            };
+
+            if let Some(url_str) = url {
+                if let Ok(cache) = SIZE_CACHE.read() {
+                    if let Some(&cached_size) = cache.sizes.get(url_str) {
+                        if is_valid(cached_size) {
+                            return true;
+                        }
+                    }
+                }
             }
-        } else {
-            false
+
+            if expected_size == 0 {
+                return actual_size >= 1000;
+            }
+
+            if is_valid(expected_size) {
+                return true;
+            }
         }
-    } else {
-        false
+    } else if path.is_dir() {
+        if let Ok(entries) = fs::read_dir(path) {
+            return entries.count() > 5;
+        }
     }
+    false
 }
 
 pub fn get_available_space(path: &Path) -> std::io::Result<u64> {

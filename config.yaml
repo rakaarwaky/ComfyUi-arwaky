@@ -1,0 +1,29 @@
+models_dir: /home/raka/SharedData/Models
+hf_token: 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
+paths:
+  clip_vision: clip_vision/
+  clip: clip/
+  frame_interpolation: frame_interpolation/
+  hypernetworks: hypernetworks/
+  geometry_estimation: geometry_estimation/
+  checkpoints: checkpoints/
+  vae: vae/
+  latent_upscale: latent_upscale_models/
+  style_models: style_models/
+  upscale_models: upscale_models/
+  photomaker: photomaker/
+  detection: detection/
+  embeddings: embeddings/
+  text_encoders: text_encoders/
+  background_removal: background_removal/
+  controlnet: controlnet/
+  optical_flow: optical_flow/
+  diffusers: diffusers/
+  configs: configs/
+  model_patches: model_patches/
+  gligen: gligen/
+  animatediff_models: animatediff_models/
+  loras: loras/
+  diffusion_models: diffusion_models/
+  audio_encoders: audio_encoders/
+  vae_approx: vae_approx/

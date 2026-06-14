@@ -19,6 +19,7 @@ pub enum DownloadEvent {
         worker_id: usize,
         filename: String,
         success: bool,
+        error_msg: Option<String>,
     },
     AllComplete {
         completed: usize,

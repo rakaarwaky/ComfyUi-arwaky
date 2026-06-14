@@ -5,6 +5,7 @@ pub struct Model {
     pub category: String,
     pub filename: String,
     pub url: String,
+    #[serde(default)]
     pub size_bytes: u64,
     pub group: String,
     pub notes: String,

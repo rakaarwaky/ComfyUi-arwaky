@@ -11,7 +11,6 @@
     "category": "embeddings",
     "filename": "easynegative.safetensors",
     "url": "https://huggingface.co/datasets/gsdf/EasyNegative/resolve/main/EasyNegative.safetensors",
-    "size_bytes": 24000,
     "group": "other",
     "notes": "Negative prompt embedding"
   },
@@ -67,7 +66,7 @@
     "category": "latent_upscale_models",
     "filename": "latent-upscaler-v2.1_SDxl-x1.5.safetensors",
     "url": "https://huggingface.co/city96/SD-Latent-Upscaler/resolve/main/latent-upscaler-v2.1_SDxl-x1.5.safetensors",
-    "size_bytes": 7400000,
+    "size_bytes": 2385200,
     "group": "other",
     "notes": "Latent space upscaler"
   },
@@ -75,7 +74,7 @@
     "category": "optical_flow",
     "filename": "raft_large_C_T_V2-1bb1363a.pth",
     "url": "https://download.pytorch.org/models/raft_large_C_T_V2-1bb1363a.pth",
-    "size_bytes": 85000000,
+    "size_bytes": 21106607,
     "group": "video",
     "notes": "RAFT optical flow for video"
   },
@@ -91,7 +90,7 @@
     "category": "frame_interpolation",
     "filename": "film_net_fp32.pt",
     "url": "https://huggingface.co/nguu/film-pytorch/resolve/main/film_net_fp32.pt",
-    "size_bytes": 156000000,
+    "size_bytes": 137922129,
     "group": "video",
     "notes": "FILM frame interpolation"
   },
@@ -131,7 +130,7 @@
     "category": "clip_vision",
     "filename": "clip_vision_h.safetensors",
     "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
-    "size_bytes": 3700000000,
+    "size_bytes": 1264219396,
     "group": "sdxl",
     "notes": "CLIP Vision H"
   },
@@ -139,7 +138,7 @@
     "category": "style_models",
     "filename": "ip-adapter_sdxl.safetensors",
     "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors",
-    "size_bytes": 1100000000,
+    "size_bytes": 702585376,
     "group": "sdxl",
     "notes": "IP-Adapter for SDXL"
   },
@@ -171,7 +170,7 @@
     "category": "animatediff_models",
     "filename": "mm_sdxl_v10_beta.ckpt",
     "url": "https://huggingface.co/guoyww/AnimateDiff/resolve/main/mm_sdxl_v10_beta.ckpt",
-    "size_bytes": 1600000000,
+    "size_bytes": 950143538,
     "group": "video",
     "notes": "AnimateDiff motion module for SDXL"
   },
@@ -265,25 +264,23 @@
   },
   {
     "category": "diffusion_models",
-    "filename": "qwen_image_edit_2511_Q4_K_M.gguf",
-    "url": "https://huggingface.co/city96/Qwen-Image-Edit-2511-gguf/resolve/main/qwen_image_edit_2511_Q4_K_M.gguf",
-    "size_bytes": 11000000000,
+    "filename": "qwen-image-edit-2511-Q4_K_M.gguf",
+    "url": "https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_M.gguf",
     "group": "qwen",
     "notes": "Qwen-Image-Edit 2511 Q4_K_M GGUF (~11 GB VRAM, fits RX6800XT 16GB)"
   },
   {
     "category": "diffusion_models",
-    "filename": "flux1-fill-dev-Q4_K_M.gguf",
-    "url": "https://huggingface.co/city96/FLUX.1-Fill-dev-gguf/resolve/main/flux1-fill-dev-Q4_K_M.gguf",
-    "size_bytes": 13000000000,
+    "filename": "flux1-fill-dev-Q4_K_S.gguf",
+    "url": "https://huggingface.co/YarvixPA/FLUX.1-Fill-dev-GGUF/resolve/main/flux1-fill-dev-Q4_K_S.gguf",
     "group": "flux",
-    "notes": "FLUX.1 Fill Dev Q4_K_M GGUF (~13 GB VRAM, fits RX6800XT 16GB)"
+    "notes": "FLUX.1 Fill Dev Q4_K_S GGUF (~12 GB VRAM, fits RX6800XT 16GB)"
   },
   {
     "category": "vae",
     "filename": "qwen_image_vae.safetensors",
     "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors",
-    "size_bytes": 300000000,
+    "size_bytes": 253806246,
     "group": "qwen",
     "notes": "Qwen-Image VAE"
   },
@@ -306,8 +303,7 @@
   {
     "category": "segmentation",
     "filename": "birefnet_general.safetensors",
-    "url": "https://huggingface.co/zdhye/BiRefNet/resolve/main/BiRefNet-general-epoch_244.safetensors",
-    "size_bytes": 2000000000,
+    "url": "https://huggingface.co/404-Gen/BiRefNet/resolve/main/model.safetensors",
     "group": "segmentation",
     "notes": "BiRefNet General (high-quality segmentation for inpainting masks)"
   }
