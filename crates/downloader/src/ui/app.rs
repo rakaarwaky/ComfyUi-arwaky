@@ -1,10 +1,12 @@
 use ratatui::widgets::ListState;
 use std::fs;
 use std::io::{Read, Write};
+use std::os::unix::fs::FileExt;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Receiver};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::config::Config;
@@ -699,6 +701,12 @@ impl App {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct ChunkProgress {
+    total_size: u64,
+    chunk_offsets: Vec<u64>,
+}
+
 pub fn download_one_model(
     worker_id: usize,
     model: &Model,
@@ -720,149 +728,472 @@ pub fn download_one_model(
     fs::create_dir_all(&temp_dir).map_err(|e| e.to_string())?;
     let temp_path = temp_dir.join(format!("{}.tmp", sanitized_filename));
 
-    let mut current_size = 0;
-    if temp_path.exists() {
-        if let Ok(metadata) = fs::metadata(&temp_path) {
-            current_size = metadata.len();
-        }
-    }
-
     let agent = ureq::Agent::new_with_config(
         ureq::config::Config::builder()
             .timeout_connect(Some(std::time::Duration::from_secs(30)))
             .build(),
     );
-
-    let mut req = agent.get(&model.url).header("User-Agent", "Mozilla/5.0");
-
     let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
-    if let Some(t) = token {
-        req = req.header("Authorization", &format!("Bearer {}", t));
+
+    // 1. Try HEAD request to get total_size and check Accept-Ranges
+    let mut head_req = agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
+    if let Some(ref t) = token {
+        head_req = head_req.header("Authorization", &format!("Bearer {}", t));
     }
 
-    if current_size > 0 {
-        req = req.header("Range", &format!("bytes={}-", current_size));
-    }
+    let mut total_size = 0u64;
+    let mut supports_ranges = false;
 
-    let response = req.call().map_err(|e| e.to_string())?;
+    if let Ok(res) = head_req.call() {
+        let status = res.status().as_u16();
+        if status == 200 || status == 206 {
+            total_size = res
+                .headers()
+                .get("Content-Length")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(0);
 
-    let status_code = response.status().as_u16();
-    if status_code != 200 && status_code != 206 {
-        let err_msg = match status_code {
-            401 => "HTTP 401: Unauthorized (Invalid/Gated token?)".to_string(),
-            403 => "HTTP 403: Forbidden (Check access rights)".to_string(),
-            404 => "HTTP 404: Not Found (Invalid URL/Model doesn't exist)".to_string(),
-            _ => format!("HTTP Error {}", status_code),
-        };
-        return Err(err_msg);
-    }
-    let is_partial = status_code == 206;
-
-    let response_len: u64 = response
-        .headers()
-        .get("Content-Length")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
-
-    let total_size = if is_partial {
-        current_size + response_len
-    } else {
-        if response_len > 0 {
-            response_len
-        } else {
-            model.size_bytes
-        }
-    };
-
-    let file = if is_partial {
-        fs::OpenOptions::new().append(true).open(&temp_path)
-    } else {
-        fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&temp_path)
-    };
-
-    let file = file.map_err(|e| e.to_string())?;
-    let mut writer = std::io::BufWriter::new(file);
-    let mut reader = response.into_body().into_reader();
-    let mut buf = vec![0u8; 128 * 1024];
-    let mut downloaded: u64 = if is_partial { current_size } else { 0 };
-    let start_time = Instant::now();
-    let mut last_report = Instant::now();
-    let mut last_progress_instant = start_time;
-    const MAX_DOWNLOAD_SECONDS: u64 = 3600;
-    const STALL_TIMEOUT_SECONDS: u64 = 300;
-
-    loop {
-        if cancel_token.load(Ordering::Acquire) {
-            return Err("Cancelled".to_string());
-        }
-
-        if start_time.elapsed() > Duration::from_secs(MAX_DOWNLOAD_SECONDS) {
-            return Err("Max download time exceeded".to_string());
-        }
-
-        if last_progress_instant.elapsed() > Duration::from_secs(STALL_TIMEOUT_SECONDS) {
-            return Err("Download stalled - no progress".to_string());
-        }
-
-        match reader.read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => {
-                writer.write_all(&buf[..n]).map_err(|e| e.to_string())?;
-                downloaded += n as u64;
-                last_progress_instant = Instant::now();
-
-                if last_report.elapsed() >= Duration::from_millis(200) {
-                    let elapsed = start_time.elapsed().as_secs_f64();
-                    let downloaded_since_start = if is_partial {
-                        downloaded.saturating_sub(current_size)
-                    } else {
-                        downloaded
-                    };
-                    let speed = if elapsed > 0.0 {
-                        (downloaded_since_start as f64) / (1024.0 * 1024.0) / elapsed
-                    } else {
-                        0.0
-                    };
-                    let eta = if speed > 0.0 {
-                        (((total_size.saturating_sub(downloaded)) as f64)
-                            / (1024.0 * 1024.0)
-                            / speed) as u64
-                    } else {
-                        0
-                    };
-
-                    let _ = tx.send(DownloadEvent::Progress {
-                        worker_id,
-                        filename: model.filename.clone(),
-                        downloaded,
-                        total: total_size,
-                        speed_mb_s: speed,
-                        eta_secs: eta,
-                    });
-                    last_report = Instant::now();
+            if let Some(accept_ranges) = res
+                .headers()
+                .get("Accept-Ranges")
+                .and_then(|v| v.to_str().ok())
+            {
+                if accept_ranges.to_lowercase().contains("bytes") {
+                    supports_ranges = true;
                 }
             }
-            Err(e) => return Err(e.to_string()),
         }
     }
 
-    writer.flush().map_err(|e| e.to_string())?;
-    drop(writer);
+    // 2. If HEAD failed or accept-ranges not found, try a small GET bytes=0-0
+    if !supports_ranges || total_size == 0 {
+        let mut test_req = agent
+            .get(&model.url)
+            .header("User-Agent", "Mozilla/5.0")
+            .header("Range", "bytes=0-0");
+        if let Some(ref t) = token {
+            test_req = test_req.header("Authorization", &format!("Bearer {}", t));
+        }
+        if let Ok(res) = test_req.call() {
+            let status = res.status().as_u16();
+            if status == 206 {
+                supports_ranges = true;
+                if total_size == 0 {
+                    if let Some(content_range) = res
+                        .headers()
+                        .get("Content-Range")
+                        .and_then(|v| v.to_str().ok())
+                    {
+                        if let Some(total) = content_range
+                            .rsplit('/')
+                            .next()
+                            .and_then(|s| s.parse::<u64>().ok())
+                        {
+                            total_size = total;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    if total_size > 0 {
-        let actual_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
-        let diff = actual_size.abs_diff(total_size);
-        let allowed_diff = (total_size / 100).min(1024 * 1024); // 1% or 1MB
-        if diff > allowed_diff {
-            return Err(format!(
-                "Size mismatch: expected {}, got {}",
-                total_size, actual_size
-            ));
+    // If still 0, fallback to Model's size if populated
+    if total_size == 0 {
+        total_size = model.size_bytes;
+    }
+
+    if supports_ranges && total_size > 0 {
+        const N_CHUNKS: usize = 4;
+        let progress_path = temp_path.with_extension("progress");
+
+        let chunk_size = total_size / N_CHUNKS as u64;
+        let mut chunks = Vec::new();
+        for i in 0..N_CHUNKS {
+            let start = i as u64 * chunk_size;
+            let end = if i == N_CHUNKS - 1 {
+                total_size - 1
+            } else {
+                (i as u64 + 1) * chunk_size - 1
+            };
+            chunks.push((start, end));
+        }
+
+        let mut chunk_offsets = vec![0u64; N_CHUNKS];
+        if progress_path.exists() && temp_path.exists() {
+            if let Ok(content) = fs::read_to_string(&progress_path) {
+                if let Ok(p) = serde_json::from_str::<ChunkProgress>(&content) {
+                    if p.total_size == total_size && p.chunk_offsets.len() == N_CHUNKS {
+                        chunk_offsets = p.chunk_offsets;
+                    }
+                }
+            }
+        }
+
+        // Validate actual file size on disk matches total_size if we think we are resuming
+        let actual_file_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
+        if actual_file_size != total_size {
+            chunk_offsets = vec![0u64; N_CHUNKS];
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&temp_path)
+                .map_err(|e| e.to_string())?;
+            file.set_len(total_size).map_err(|e| e.to_string())?;
+        }
+
+        let chunk_progress_atomics: Vec<Arc<AtomicU64>> = chunk_offsets
+            .iter()
+            .map(|&offset| Arc::new(AtomicU64::new(offset)))
+            .collect();
+
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .open(&temp_path)
+            .map_err(|e| e.to_string())?;
+        let shared_file = Arc::new(file);
+
+        let mut handles = Vec::new();
+        let thread_errors = Arc::new(Mutex::new(Vec::new()));
+
+        for i in 0..N_CHUNKS {
+            let start = chunks[i].0;
+            let end = chunks[i].1;
+            let initial_offset = chunk_offsets[i];
+            let start_pos = start + initial_offset;
+
+            if start_pos > end {
+                // Chunk already fully completed
+                continue;
+            }
+
+            let file_clone = Arc::clone(&shared_file);
+            let atomic_progress = Arc::clone(&chunk_progress_atomics[i]);
+            let cancel_token_clone = Arc::clone(cancel_token);
+            let url = model.url.clone();
+            let token_clone = token.clone();
+            let thread_errors_clone = Arc::clone(&thread_errors);
+
+            let handle = thread::spawn(move || {
+                let res = (|| -> Result<(), String> {
+                    let agent = ureq::Agent::new_with_config(
+                        ureq::config::Config::builder()
+                            .timeout_connect(Some(std::time::Duration::from_secs(30)))
+                            .build(),
+                    );
+
+                    let mut req = agent
+                        .get(&url)
+                        .header("User-Agent", "Mozilla/5.0")
+                        .header("Range", &format!("bytes={}-{}", start_pos, end));
+
+                    if let Some(ref t) = token_clone {
+                        req = req.header("Authorization", &format!("Bearer {}", t));
+                    }
+
+                    let response = req.call().map_err(|e| e.to_string())?;
+                    let status_code = response.status().as_u16();
+                    if status_code != 206 && status_code != 200 {
+                        return Err(format!("HTTP Error {}", status_code));
+                    }
+
+                    let mut reader = response.into_body().into_reader();
+                    let mut buf = vec![0u8; 128 * 1024];
+                    let mut bytes_downloaded_this_session = 0u64;
+
+                    loop {
+                        if cancel_token_clone.load(Ordering::Acquire) {
+                            return Err("Cancelled".to_string());
+                        }
+
+                        match reader.read(&mut buf) {
+                            Ok(0) => break,
+                            Ok(n) => {
+                                let write_pos = start_pos + bytes_downloaded_this_session;
+                                file_clone
+                                    .write_all_at(&buf[..n], write_pos)
+                                    .map_err(|e| e.to_string())?;
+
+                                bytes_downloaded_this_session += n as u64;
+                                atomic_progress.store(
+                                    initial_offset + bytes_downloaded_this_session,
+                                    Ordering::Release,
+                                );
+                            }
+                            Err(e) => return Err(e.to_string()),
+                        }
+                    }
+                    Ok(())
+                })();
+
+                if let Err(e) = res {
+                    let mut errs = thread_errors_clone.lock().unwrap();
+                    errs.push(e);
+                }
+            });
+            handles.push(handle);
+        }
+
+        let start_time = Instant::now();
+        let mut last_report = Instant::now();
+        let mut last_save = Instant::now();
+        let mut last_progress_bytes = chunk_offsets.iter().sum::<u64>();
+        let mut last_progress_instant = Instant::now();
+
+        const MAX_DOWNLOAD_SECONDS: u64 = 3600;
+        const STALL_TIMEOUT_SECONDS: u64 = 300;
+
+        let mut success = true;
+        let mut final_err = None;
+
+        loop {
+            if cancel_token.load(Ordering::Acquire) {
+                success = false;
+                final_err = Some("Cancelled".to_string());
+                break;
+            }
+
+            if start_time.elapsed() > Duration::from_secs(MAX_DOWNLOAD_SECONDS) {
+                success = false;
+                final_err = Some("Max download time exceeded".to_string());
+                break;
+            }
+
+            // Check for errors in threads
+            {
+                let errs = thread_errors.lock().unwrap();
+                if !errs.is_empty() {
+                    success = false;
+                    final_err = Some(errs[0].clone());
+                    break;
+                }
+            }
+
+            let downloaded: u64 = chunk_progress_atomics
+                .iter()
+                .map(|a| a.load(Ordering::Acquire))
+                .sum();
+
+            if downloaded > last_progress_bytes {
+                last_progress_bytes = downloaded;
+                last_progress_instant = Instant::now();
+            } else if last_progress_instant.elapsed() > Duration::from_secs(STALL_TIMEOUT_SECONDS) {
+                success = false;
+                final_err = Some("Download stalled - no progress".to_string());
+                break;
+            }
+
+            // Send progress update
+            if last_report.elapsed() >= Duration::from_millis(200) {
+                let elapsed = start_time.elapsed().as_secs_f64();
+                let initial_sum: u64 = chunk_offsets.iter().sum();
+                let downloaded_since_start = downloaded.saturating_sub(initial_sum);
+                let speed = if elapsed > 0.0 {
+                    (downloaded_since_start as f64) / (1024.0 * 1024.0) / elapsed
+                } else {
+                    0.0
+                };
+                let eta = if speed > 0.0 {
+                    (((total_size.saturating_sub(downloaded)) as f64) / (1024.0 * 1024.0) / speed)
+                        as u64
+                } else {
+                    0
+                };
+
+                let _ = tx.send(DownloadEvent::Progress {
+                    worker_id,
+                    filename: model.filename.clone(),
+                    downloaded,
+                    total: total_size,
+                    speed_mb_s: speed,
+                    eta_secs: eta,
+                });
+                last_report = Instant::now();
+            }
+
+            // Periodically save progress (every 1 second)
+            if last_save.elapsed() >= Duration::from_secs(1) {
+                let current_offsets: Vec<u64> = chunk_progress_atomics
+                    .iter()
+                    .map(|a| a.load(Ordering::Acquire))
+                    .collect();
+                let progress = ChunkProgress {
+                    total_size,
+                    chunk_offsets: current_offsets,
+                };
+                if let Ok(content) = serde_json::to_string(&progress) {
+                    let _ = fs::write(&progress_path, content);
+                }
+                last_save = Instant::now();
+            }
+
+            let all_done = handles.iter().all(|h| h.is_finished());
+            if all_done {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(50));
+        }
+
+        // Wait for all threads to terminate
+        for handle in handles {
+            let _ = handle.join();
+        }
+
+        // Check again for thread errors after join
+        if success {
+            let errs = thread_errors.lock().unwrap();
+            if !errs.is_empty() {
+                success = false;
+                final_err = Some(errs[0].clone());
+            }
+        }
+
+        if !success {
+            return Err(final_err.unwrap_or_else(|| "Unknown download error".to_string()));
+        }
+
+        let _ = fs::remove_file(&progress_path);
+    } else {
+        // Fallback to single-threaded download code if server doesn't support ranges
+        let mut current_size = 0;
+        if temp_path.exists() {
+            if let Ok(metadata) = fs::metadata(&temp_path) {
+                current_size = metadata.len();
+            }
+        }
+
+        let mut req = agent.get(&model.url).header("User-Agent", "Mozilla/5.0");
+
+        if let Some(ref t) = token {
+            req = req.header("Authorization", &format!("Bearer {}", t));
+        }
+
+        if current_size > 0 {
+            req = req.header("Range", &format!("bytes={}-", current_size));
+        }
+
+        let response = req.call().map_err(|e| e.to_string())?;
+
+        let status_code = response.status().as_u16();
+        if status_code != 200 && status_code != 206 {
+            let err_msg = match status_code {
+                401 => "HTTP 401: Unauthorized (Invalid/Gated token?)".to_string(),
+                403 => "HTTP 403: Forbidden (Check access rights)".to_string(),
+                404 => "HTTP 404: Not Found (Invalid URL/Model doesn't exist)".to_string(),
+                _ => format!("HTTP Error {}", status_code),
+            };
+            return Err(err_msg);
+        }
+        let is_partial = status_code == 206;
+
+        let response_len: u64 = response
+            .headers()
+            .get("Content-Length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
+        total_size = if is_partial {
+            current_size + response_len
+        } else {
+            if response_len > 0 {
+                response_len
+            } else {
+                model.size_bytes
+            }
+        };
+
+        let file = if is_partial {
+            fs::OpenOptions::new().append(true).open(&temp_path)
+        } else {
+            fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&temp_path)
+        };
+
+        let file = file.map_err(|e| e.to_string())?;
+        let mut writer = std::io::BufWriter::new(file);
+        let mut reader = response.into_body().into_reader();
+        let mut buf = vec![0u8; 128 * 1024];
+        let mut downloaded: u64 = if is_partial { current_size } else { 0 };
+        let start_time = Instant::now();
+        let mut last_report = Instant::now();
+        let mut last_progress_instant = start_time;
+        const MAX_DOWNLOAD_SECONDS: u64 = 3600;
+        const STALL_TIMEOUT_SECONDS: u64 = 300;
+
+        loop {
+            if cancel_token.load(Ordering::Acquire) {
+                return Err("Cancelled".to_string());
+            }
+
+            if start_time.elapsed() > Duration::from_secs(MAX_DOWNLOAD_SECONDS) {
+                return Err("Max download time exceeded".to_string());
+            }
+
+            if last_progress_instant.elapsed() > Duration::from_secs(STALL_TIMEOUT_SECONDS) {
+                return Err("Download stalled - no progress".to_string());
+            }
+
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    writer.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+                    downloaded += n as u64;
+                    last_progress_instant = Instant::now();
+
+                    if last_report.elapsed() >= Duration::from_millis(200) {
+                        let elapsed = start_time.elapsed().as_secs_f64();
+                        let downloaded_since_start = if is_partial {
+                            downloaded.saturating_sub(current_size)
+                        } else {
+                            downloaded
+                        };
+                        let speed = if elapsed > 0.0 {
+                            (downloaded_since_start as f64) / (1024.0 * 1024.0) / elapsed
+                        } else {
+                            0.0
+                        };
+                        let eta = if speed > 0.0 {
+                            (((total_size.saturating_sub(downloaded)) as f64)
+                                / (1024.0 * 1024.0)
+                                / speed) as u64
+                        } else {
+                            0
+                        };
+
+                        let _ = tx.send(DownloadEvent::Progress {
+                            worker_id,
+                            filename: model.filename.clone(),
+                            downloaded,
+                            total: total_size,
+                            speed_mb_s: speed,
+                            eta_secs: eta,
+                        });
+                        last_report = Instant::now();
+                    }
+                }
+                Err(e) => return Err(e.to_string()),
+            }
+        }
+
+        writer.flush().map_err(|e| e.to_string())?;
+        drop(writer);
+
+        if total_size > 0 {
+            let actual_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
+            let diff = actual_size.abs_diff(total_size);
+            let allowed_diff = (total_size / 100).min(1024 * 1024); // 1% or 1MB
+            if diff > allowed_diff {
+                return Err(format!(
+                    "Size mismatch: expected {}, got {}",
+                    total_size, actual_size
+                ));
+            }
         }
     }
 
