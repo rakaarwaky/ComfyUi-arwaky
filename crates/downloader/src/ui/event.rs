@@ -31,7 +31,27 @@ pub fn handle_event(
                             }
                         } else {
                             match key.code {
-                                KeyCode::Char('q') | KeyCode::Esc => return Ok(false),
+                                KeyCode::Char('q') | KeyCode::Esc => {
+                                    if app.rx.is_some() {
+                                        app.add_log("Cannot exit: download is in progress. Cancel first [x] or wait.");
+                                    } else {
+                                        return Ok(false);
+                                    }
+                                }
+                                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                    if app.rx.is_some() {
+                                        app.add_log("User cancelled downloading queue.");
+                                        app.cancel_token.store(true, Ordering::Release);
+                                    } else {
+                                        return Ok(false);
+                                    }
+                                }
+                                KeyCode::Char('x') | KeyCode::Char('X') => {
+                                    if app.rx.is_some() {
+                                        app.add_log("User cancelled downloading queue.");
+                                        app.cancel_token.store(true, Ordering::Release);
+                                    }
+                                }
                                 KeyCode::Char('/') => {
                                     app.input_mode = InputMode::Search;
                                 }
@@ -200,14 +220,6 @@ pub fn handle_event(
                         }
                         _ => {}
                     },
-                    AppState::Downloading { .. } => {
-                        if key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL)
-                        {
-                            app.add_log("User cancelled downloading queue.");
-                            app.cancel_token.store(true, Ordering::Release);
-                        }
-                    }
                     AppState::Finished { .. } => {
                         if key.code == KeyCode::Enter || key.code == KeyCode::Esc {
                             app.state = AppState::Menu;
@@ -309,8 +321,28 @@ pub fn handle_event(
                             } else if (135..=154).contains(&col) {
                                 app.check_space_and_start();
                             } else if col >= 155 {
-                                return Ok(false); // Exit downloader
+                                if app.rx.is_some() {
+                                    app.add_log("Cannot exit: download is in progress. Cancel first [x] or wait.");
+                                } else {
+                                    return Ok(false); // Exit downloader
+                                }
                             }
+                        }
+                    }
+
+                    // 4. Click Cancel in Sidebar Progress Panel (if downloading)
+                    if app.rx.is_some() {
+                        let right_rects = Layout::default()
+                            .direction(Direction::Vertical)
+                            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                            .split(main_layout[1]);
+                        let cancel_row = right_rects[1].y + right_rects[1].height.saturating_sub(2);
+                        if mouse.row == cancel_row
+                            && mouse.column >= right_rects[1].x + 3
+                            && mouse.column < right_rects[1].x + 26
+                        {
+                            app.add_log("User cancelled downloading queue.");
+                            app.cancel_token.store(true, Ordering::Release);
                         }
                     }
                 }
@@ -358,17 +390,6 @@ pub fn handle_event(
                         } else if (24..=37).contains(&col) {
                             // Cancel
                             app.state = AppState::Menu;
-                        }
-                    }
-                }
-                AppState::Downloading { .. } => {
-                    let popup_rect = centered_rect(70, 42, size);
-                    if mouse.row == popup_rect.y + popup_rect.height.saturating_sub(2) {
-                        let col = mouse.column.saturating_sub(popup_rect.x);
-                        if (4..=27).contains(&col) {
-                            // Cancel download
-                            app.add_log("User cancelled downloading queue.");
-                            app.cancel_token.store(true, Ordering::Release);
                         }
                     }
                 }

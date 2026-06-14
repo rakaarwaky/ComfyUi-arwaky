@@ -234,19 +234,100 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
         .wrap(Wrap { trim: true });
     f.render_widget(details_paragraph, right_rects[0]);
 
-    let guide_text = "RX6800XT 16GB VRAM Tips:\n\
-                      - GGUF quants (Q5_K_S) are recommended for FLUX Dev.\n\
-                      - FP8 quants are memory efficient.\n\
-                      - Keep batch size to 1 for FLUX, max 2-3 for SDXL.\n\
-                      - Set HSA_OVERRIDE_GFX_VERSION=10.3.0 in environment.";
-    let guide_paragraph = Paragraph::new(guide_text)
-        .block(
-            Block::default()
-                .title(" GPU Optimization Guide ")
-                .borders(Borders::ALL),
-        )
-        .wrap(Wrap { trim: true });
-    f.render_widget(guide_paragraph, right_rects[1]);
+    if app.rx.is_some() {
+        let remaining = app.total_to_download.saturating_sub(app.completed_count + app.failed_count);
+
+        let mut progress_lines = vec![
+            Line::from(vec![
+                Span::styled("Tasks Remain: ", Style::default().fg(Color::Gray)),
+                Span::styled(format!("{}", remaining), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("  Done: ", Style::default().fg(Color::Gray)),
+                Span::styled(format!("{}", app.completed_count), Style::default().fg(Color::Green)),
+                Span::styled("  Fail: ", Style::default().fg(Color::Gray)),
+                Span::styled(format!("{}", app.failed_count), Style::default().fg(Color::Red)),
+            ]),
+            Line::from(""),
+        ];
+
+        for (w_id, active) in app.active_downloads.iter().enumerate() {
+            if let Some(dl) = active {
+                let pct = if dl.total_bytes > 0 {
+                    (dl.bytes_downloaded as f64 / dl.total_bytes as f64 * 100.0) as u16
+                } else {
+                    0
+                };
+                
+                let limit = (right_rects[1].width as usize).saturating_sub(15).max(10);
+                let truncated_filename = if dl.filename.len() > limit {
+                    format!("...{}", &dl.filename[dl.filename.len() - limit..])
+                } else {
+                    dl.filename.clone()
+                };
+                
+                let bar_width = (right_rects[1].width as usize).saturating_sub(15).clamp(10, 20);
+                let bar = draw_progress_bar(pct, bar_width as u16);
+
+                progress_lines.push(Line::from(vec![
+                    Span::styled(format!("W#{}: ", w_id + 1), Style::default().fg(Color::Cyan)),
+                    Span::styled(truncated_filename, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                ]));
+                
+                progress_lines.push(Line::from(vec![
+                    Span::raw(format!("  {}  ", bar)),
+                    Span::styled(format!("{:.1}MB/s", dl.speed_mb_s), Style::default().fg(Color::Yellow)),
+                ]));
+                
+                progress_lines.push(Line::from(vec![
+                    Span::raw(format!("  ETA: {}s | {}/{}", dl.eta_secs, format_size(dl.bytes_downloaded), format_size(dl.total_bytes))),
+                ]));
+            } else {
+                progress_lines.push(Line::from(vec![
+                    Span::styled(format!("W#{}: ", w_id + 1), Style::default().fg(Color::DarkGray)),
+                    Span::styled("Idle / Waiting...", Style::default().fg(Color::DarkGray)),
+                ]));
+                progress_lines.push(Line::from(""));
+                progress_lines.push(Line::from(""));
+            }
+            progress_lines.push(Line::from(""));
+        }
+
+        let used_lines = progress_lines.len() + 2;
+        let needed_padding = (right_rects[1].height as usize).saturating_sub(used_lines + 2);
+        for _ in 0..needed_padding {
+            progress_lines.push(Line::from(""));
+        }
+
+        progress_lines.push(Line::from(vec![
+            Span::raw("   "),
+            Span::styled(
+                "  [ CANCEL DOWNLOAD ]  ",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
+        ]));
+
+        let progress_paragraph = Paragraph::new(progress_lines)
+            .block(
+                Block::default()
+                    .title(" Download Progress ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            );
+        f.render_widget(progress_paragraph, right_rects[1]);
+    } else {
+        let guide_text = "RX6800XT 16GB VRAM Tips:\n\
+                          - GGUF quants (Q5_K_S) are recommended for FLUX Dev.\n\
+                          - FP8 quants are memory efficient.\n\
+                          - Keep batch size to 1 for FLUX, max 2-3 for SDXL.\n\
+                          - Set HSA_OVERRIDE_GFX_VERSION=10.3.0 in environment.";
+        let guide_paragraph = Paragraph::new(guide_text)
+            .block(
+                Block::default()
+                    .title(" GPU Optimization Guide ")
+                    .borders(Borders::ALL),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(guide_paragraph, right_rects[1]);
+    }
 
     // Draw Bottom Logs
     let max_lines = 5;
@@ -267,6 +348,8 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     // Draw Bottom Colored Status Bar Footer
     let help_text = if app.input_mode == InputMode::Search {
         "  [Type to Search]  |  [Enter/Esc] to exit search mode  |  [Backspace] to delete  "
+    } else if app.rx.is_some() {
+        "  [Click Tabs/Items]  |  [Tab/Shift+Tab] Cycle Tabs  |  [Space] Toggle  |  [a] Select All Missing  |  [x] Cancel Download  |  [c] Settings  "
     } else {
         "  [Click Tabs/Items]  |  [Tab/Shift+Tab] Cycle Tabs  |  [Space] Toggle  |  [a] Select All Missing  |  [r] Refresh  |  [c] Settings  |  [Enter/d] Download  "
     };
@@ -392,83 +475,6 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 )
                 .wrap(Wrap { trim: true });
             f.render_widget(warning_paragraph, popup_rect);
-        }
-        AppState::Downloading {
-            ref active_downloads,
-            completed_count,
-            failed_count,
-            total_to_download,
-        } => {
-            let popup_rect = centered_rect(70, 42, size);
-            f.render_widget(Clear, popup_rect);
-
-            let mut progress_lines = vec![
-                Line::from(format!(
-                    "Overall Progress: Completed: {} | Failed: {} | Remaining Tasks: {}",
-                    completed_count,
-                    failed_count,
-                    total_to_download.saturating_sub(completed_count + failed_count),
-                )),
-                Line::from(format!(
-                    "Workers: {} Active",
-                    active_downloads.iter().filter(|x| x.is_some()).count()
-                )),
-                Line::from(""),
-            ];
-
-            for (w_id, active) in active_downloads.iter().enumerate() {
-                if let Some(dl) = active {
-                    let pct = if dl.total_bytes > 0 {
-                        (dl.bytes_downloaded as f64 / dl.total_bytes as f64 * 100.0) as u16
-                    } else {
-                        0
-                    };
-                    let bar_width = 25;
-                    let bar = draw_progress_bar(pct, bar_width);
-                    progress_lines.push(Line::from(format!(
-                        "  Worker #{}: {} {}",
-                        w_id + 1,
-                        dl.filename,
-                        bar
-                    )));
-                    progress_lines.push(Line::from(format!(
-                        "    Progress: {}/{} | Speed: {:.2} MB/s | ETA: {}s",
-                        format_size(dl.bytes_downloaded),
-                        format_size(dl.total_bytes),
-                        dl.speed_mb_s,
-                        dl.eta_secs
-                    )));
-                } else {
-                    progress_lines.push(Line::from(format!(
-                        "  Worker #{}: Idle / Waiting for task...",
-                        w_id + 1
-                    )));
-                    progress_lines.push(Line::from(""));
-                }
-                progress_lines.push(Line::from(""));
-            }
-
-            let used_lines = progress_lines.len() + 2;
-            let needed_padding = (popup_rect.height as usize).saturating_sub(used_lines + 2);
-            for _ in 0..needed_padding {
-                progress_lines.push(Line::from(""));
-            }
-
-            progress_lines.push(Line::from(vec![
-                Span::raw("   "),
-                Span::styled(
-                    "  [ CANCEL DOWNLOAD ]  ",
-                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                ),
-            ]));
-
-            let progress_paragraph = Paragraph::new(progress_lines).block(
-                Block::default()
-                    .title(" Multi-Worker Download Queue ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Yellow)),
-            );
-            f.render_widget(progress_paragraph, popup_rect);
         }
         AppState::Finished {
             completed,

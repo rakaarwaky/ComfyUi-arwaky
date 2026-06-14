@@ -41,12 +41,6 @@ pub enum AppState {
         required: u64,
         available: u64,
     },
-    Downloading {
-        active_downloads: Vec<Option<ActiveDownload>>, // mapped by worker_id
-        completed_count: usize,
-        failed_count: usize,
-        total_to_download: usize,
-    },
     Finished {
         completed: usize,
         failed: usize,
@@ -72,6 +66,12 @@ pub struct App {
     pub active_tab: usize,
     pub tab_offset: usize,
     pub categories: Vec<String>,
+
+    // Active downloads tracking
+    pub active_downloads: Vec<Option<ActiveDownload>>,
+    pub completed_count: usize,
+    pub failed_count: usize,
+    pub total_to_download: usize,
 }
 
 impl App {
@@ -99,6 +99,10 @@ impl App {
             active_tab: 0,
             tab_offset: 0,
             categories: cats,
+            active_downloads: vec![None; 2],
+            completed_count: 0,
+            failed_count: 0,
+            total_to_download: 0,
         };
         app.add_log("Downloader initialized successfully.");
         app
@@ -250,6 +254,10 @@ impl App {
     }
 
     pub fn check_space_and_start(&mut self) {
+        if self.rx.is_some() {
+            self.add_log("Download skipped: a download or refresh task is already running.");
+            return;
+        }
         if self.selected_indices.is_empty() {
             self.add_log("No models selected to download.");
             return;
@@ -280,8 +288,8 @@ impl App {
     }
 
     pub fn refresh_selected_or_all_model_sizes(&mut self) {
-        if matches!(self.state, AppState::Downloading { .. }) {
-            self.add_log("Refresh skipped: download queue is already running.");
+        if self.rx.is_some() {
+            self.add_log("Refresh skipped: download/refresh queue is already running.");
             return;
         }
 
@@ -446,12 +454,10 @@ impl App {
             total_selected
         ));
 
-        self.state = AppState::Downloading {
-            active_downloads: vec![None; 2], // 2 workers
-            completed_count: 0,
-            failed_count: 0,
-            total_to_download: total_selected,
-        };
+        self.active_downloads = vec![None; 2]; // 2 workers
+        self.completed_count = 0;
+        self.failed_count = 0;
+        self.total_to_download = total_selected;
 
         // Coordinator thread
         std::thread::spawn(move || {
@@ -563,20 +569,14 @@ impl App {
                         worker_id + 1,
                         filename
                     ));
-                    if let AppState::Downloading {
-                        ref mut active_downloads,
-                        ..
-                    } = self.state
-                    {
-                        if worker_id < active_downloads.len() {
-                            active_downloads[worker_id] = Some(ActiveDownload {
-                                filename,
-                                bytes_downloaded: 0,
-                                total_bytes: 0,
-                                speed_mb_s: 0.0,
-                                eta_secs: 0,
-                            });
-                        }
+                    if worker_id < self.active_downloads.len() {
+                        self.active_downloads[worker_id] = Some(ActiveDownload {
+                            filename,
+                            bytes_downloaded: 0,
+                            total_bytes: 0,
+                            speed_mb_s: 0.0,
+                            eta_secs: 0,
+                        });
                     }
                 }
                 DownloadEvent::Progress {
@@ -587,18 +587,12 @@ impl App {
                     eta_secs,
                     ..
                 } => {
-                    if let AppState::Downloading {
-                        ref mut active_downloads,
-                        ..
-                    } = self.state
-                    {
-                        if worker_id < active_downloads.len() {
-                            if let Some(ref mut active) = active_downloads[worker_id] {
-                                active.bytes_downloaded = downloaded;
-                                active.total_bytes = total;
-                                active.speed_mb_s = speed_mb_s;
-                                active.eta_secs = eta_secs;
-                            }
+                    if worker_id < self.active_downloads.len() {
+                        if let Some(ref mut active) = self.active_downloads[worker_id] {
+                            active.bytes_downloaded = downloaded;
+                            active.total_bytes = total;
+                            active.speed_mb_s = speed_mb_s;
+                            active.eta_secs = eta_secs;
                         }
                     }
                 }
@@ -622,21 +616,13 @@ impl App {
                             err_suffix
                         ));
                     }
-                    if let AppState::Downloading {
-                        ref mut active_downloads,
-                        ref mut completed_count,
-                        ref mut failed_count,
-                        ..
-                    } = self.state
-                    {
-                        if worker_id < active_downloads.len() {
-                            active_downloads[worker_id] = None;
-                        }
-                        if success {
-                            *completed_count += 1;
-                        } else {
-                            *failed_count += 1;
-                        }
+                    if worker_id < self.active_downloads.len() {
+                        self.active_downloads[worker_id] = None;
+                    }
+                    if success {
+                        self.completed_count += 1;
+                    } else {
+                        self.failed_count += 1;
                     }
                 }
                 DownloadEvent::AllComplete { completed, failed } => {
