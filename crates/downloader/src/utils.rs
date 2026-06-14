@@ -72,11 +72,13 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
     if path.is_file() {
         if let Ok(metadata) = fs::metadata(path) {
             let actual_size = metadata.len();
-            
+
             // Stricter size validation: must match within 1% or 1MB, whichever is smaller
             let is_size_valid = |expected: u64| -> bool {
-                if expected == 0 { return actual_size >= 1000; }
-                let diff = if actual_size > expected { actual_size - expected } else { expected - actual_size };
+                if expected == 0 {
+                    return actual_size >= 1000;
+                }
+                let diff = actual_size.abs_diff(expected);
                 let allowed_diff = (expected / 100).min(1024 * 1024); // 1% or 1MB
                 diff <= allowed_diff
             };

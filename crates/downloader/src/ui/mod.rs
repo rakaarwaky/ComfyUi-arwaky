@@ -41,7 +41,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let dest_dir = config.resolve_category_dir(&m.category);
                 let dest_path = dest_dir.join(&m.filename);
                 if dest_path.is_file() {
-                    let needs_verification = !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
+                    let needs_verification =
+                        !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
 
                     if needs_verification {
                         let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());

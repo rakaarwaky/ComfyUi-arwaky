@@ -302,7 +302,10 @@ impl App {
         self.rx = Some(rx);
         let config = self.config.clone();
 
-        self.add_log(&format!("Refreshing metadata for {} models...", models_to_refresh.len()));
+        self.add_log(&format!(
+            "Refreshing metadata for {} models...",
+            models_to_refresh.len()
+        ));
 
         std::thread::spawn(move || {
             let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
@@ -336,13 +339,16 @@ impl App {
                             .and_then(|v| v.to_str().ok())
                             .and_then(|v| v.parse::<u64>().ok())
                             .unwrap_or(0);
-                        if size > 0 { success = true; }
+                        if size > 0 {
+                            success = true;
+                        }
                     }
                 }
 
                 // If HEAD failed or size is 0, try a small GET (some CDNs/gateways require this)
                 if !success {
-                    let mut req = agent.get(&model.url)
+                    let mut req = agent
+                        .get(&model.url)
                         .header("User-Agent", "Mozilla/5.0")
                         .header("Range", "bytes=0-0");
                     if let Some(ref t) = token {
@@ -352,16 +358,29 @@ impl App {
                         let status = res.status().as_u16();
                         if status == 200 || status == 206 {
                             // If it's 206, look for Content-Range
-                            if let Some(range) = res.headers().get("Content-Range").and_then(|v| v.to_str().ok()) {
-                                if let Some(total) = range.split('/').last().and_then(|s| s.parse::<u64>().ok()) {
+                            if let Some(range) = res
+                                .headers()
+                                .get("Content-Range")
+                                .and_then(|v| v.to_str().ok())
+                            {
+                                if let Some(total) =
+                                    range.rsplit('/').next().and_then(|s| s.parse::<u64>().ok())
+                                {
                                     size = total;
                                     success = true;
                                 }
                             }
                             // Fallback to Content-Length if it was a 200 (though we asked for range)
                             if !success {
-                                size = res.headers().get("Content-Length").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
-                                if size > 0 { success = true; }
+                                size = res
+                                    .headers()
+                                    .get("Content-Length")
+                                    .and_then(|v| v.to_str().ok())
+                                    .and_then(|v| v.parse::<u64>().ok())
+                                    .unwrap_or(0);
+                                if size > 0 {
+                                    success = true;
+                                }
                             }
                         }
                     }
@@ -377,7 +396,11 @@ impl App {
                 }
             }
 
-            let _ = tx.send(DownloadEvent::RefreshFinished { valid, invalid, unknown: unknown_size });
+            let _ = tx.send(DownloadEvent::RefreshFinished {
+                valid,
+                invalid,
+                unknown: unknown_size,
+            });
         });
     }
 
@@ -638,10 +661,18 @@ impl App {
                         }
                     }
                     if !filename.is_empty() {
-                        self.add_log(&format!("Refreshed size for {}: {}", filename, format_size(size)));
+                        self.add_log(&format!(
+                            "Refreshed size for {}: {}",
+                            filename,
+                            format_size(size)
+                        ));
                     }
                 }
-                DownloadEvent::RefreshFinished { valid, invalid, unknown } => {
+                DownloadEvent::RefreshFinished {
+                    valid,
+                    invalid,
+                    unknown,
+                } => {
                     self.add_log(&format!(
                         "Refresh complete: {} valid, {} invalid, {} unknown size.",
                         valid, invalid, unknown
@@ -676,7 +707,7 @@ pub fn download_one_model(
     tx: &std::sync::mpsc::Sender<DownloadEvent>,
 ) -> Result<(), String> {
     use crate::utils::{sanitize_filename, verify_sha256};
-    
+
     let sanitized_filename = sanitize_filename(&model.filename);
     let dest_dir = config.resolve_category_dir(&model.category);
     let dest_path = dest_dir.join(&sanitized_filename);
@@ -761,10 +792,21 @@ pub fn download_one_model(
     let mut downloaded: u64 = if is_partial { current_size } else { 0 };
     let start_time = Instant::now();
     let mut last_report = Instant::now();
+    let mut last_progress_instant = start_time;
+    const MAX_DOWNLOAD_SECONDS: u64 = 3600;
+    const STALL_TIMEOUT_SECONDS: u64 = 300;
 
     loop {
         if cancel_token.load(Ordering::Acquire) {
             return Err("Cancelled".to_string());
+        }
+
+        if start_time.elapsed() > Duration::from_secs(MAX_DOWNLOAD_SECONDS) {
+            return Err("Max download time exceeded".to_string());
+        }
+
+        if last_progress_instant.elapsed() > Duration::from_secs(STALL_TIMEOUT_SECONDS) {
+            return Err("Download stalled - no progress".to_string());
         }
 
         match reader.read(&mut buf) {
@@ -772,6 +814,7 @@ pub fn download_one_model(
             Ok(n) => {
                 writer.write_all(&buf[..n]).map_err(|e| e.to_string())?;
                 downloaded += n as u64;
+                last_progress_instant = Instant::now();
 
                 if last_report.elapsed() >= Duration::from_millis(200) {
                     let elapsed = start_time.elapsed().as_secs_f64();
@@ -813,10 +856,13 @@ pub fn download_one_model(
 
     if total_size > 0 {
         let actual_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
-        let diff = if actual_size > total_size { actual_size - total_size } else { total_size - actual_size };
+        let diff = actual_size.abs_diff(total_size);
         let allowed_diff = (total_size / 100).min(1024 * 1024); // 1% or 1MB
         if diff > allowed_diff {
-            return Err(format!("Size mismatch: expected {}, got {}", total_size, actual_size));
+            return Err(format!(
+                "Size mismatch: expected {}, got {}",
+                total_size, actual_size
+            ));
         }
     }
 
@@ -830,7 +876,7 @@ pub fn download_one_model(
             speed_mb_s: 0.0,
             eta_secs: 0,
         }); // Update UI to show verification phase
-        
+
         if !verify_sha256(&temp_path, expected_hash) {
             let _ = fs::remove_file(&temp_path);
             return Err("SHA256 integrity check failed!".to_string());
@@ -856,7 +902,7 @@ fn model_sort_size(model: &Model, cache_sizes: &std::collections::HashMap<String
     } else {
         cache_sizes.get(&model.url).copied().unwrap_or(0)
     };
-    
+
     // If size is 0 (unknown), treat it as u64::MAX to push it to the end of the queue
     if size == 0 {
         u64::MAX
