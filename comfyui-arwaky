@@ -27,15 +27,17 @@ show_menu() {
     echo -e "     Open the interactive TUI downloader to manage and download models."
     echo -e " [3] ${GREEN}${BOLD}Run Symlink Watcher Service${NC}"
     echo -e "     Run the symlink monitor service to actively track file links."
-    echo -e " [4] ${GREEN}${BOLD}Install Dependencies / Local Setup${NC}"
-    echo -e "     Install local Python/pip dependencies for ComfyUI."
-    echo -e " [5] ${GREEN}${BOLD}Upgrade ROCm Libraries${NC}"
+    echo -e " [4] ${GREEN}${BOLD}Install App Binaries (Local Setup)${NC}"
+    echo -e "     Install compiled binaries and generate local desktop shortcut."
+    echo -e " [5] ${GREEN}${BOLD}Install Python Dependencies (Venv Setup)${NC}"
+    echo -e "     Create Python 3.12 virtual environment and install requirements.txt."
+    echo -e " [6] ${GREEN}${BOLD}Upgrade ROCm Libraries${NC}"
     echo -e "     Verify and upgrade ROCm libraries for PyTorch."
-    echo -e " [6] ${GREEN}${BOLD}Build Desktop App & Downloader (Release)${NC}"
+    echo -e " [7] ${GREEN}${BOLD}Build Desktop App & Downloader (Release)${NC}"
     echo -e "     Build the desktop launcher and model downloader release binaries."
-    echo -e " [7] ${GREEN}${BOLD}Run Local CI Checks (Clippy & Format)${NC}"
+    echo -e " [8] ${GREEN}${BOLD}Run Local CI Checks (Clippy & Format)${NC}"
     echo -e "     Run local CI checks (Rust format, clippy, tests, and shellcheck)."
-    echo -e " [8] ${GREEN}${BOLD}Bump Project Version${NC}"
+    echo -e " [9] ${GREEN}${BOLD}Bump Project Version${NC}"
     echo -e "     Bump the project release version across the workspace."
     echo -e " [q] ${RED}Quit${NC}"
     echo -e "\n${CYAN}──────────────────────────────────────────────────────────${NC}"
@@ -43,7 +45,7 @@ show_menu() {
 
 while true; do
     show_menu
-    read -rp "Enter your choice (1-8 or q): " pilihan
+    read -rp "Enter your choice (1-9 or q): " pilihan
     
     case $pilihan in
         1)
@@ -67,21 +69,26 @@ while true; do
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         5)
+            echo -e "\n${YELLOW}Installing Python Dependencies...${NC}"
+            "$SCRIPTS_FOLDER/install_deps.sh"
+            read -n 1 -s -r -p "Press any key to return to menu..."
+            ;;
+        6)
             echo -e "\n${YELLOW}Running ROCm Library Upgrade...${NC}"
             "$SCRIPTS_FOLDER/upgrade_rocm.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        6)
+        7)
             echo -e "\n${YELLOW}Building Desktop App Launcher & Downloader...${NC}"
             "$SCRIPTS_FOLDER/build.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        7)
+        8)
             echo -e "\n${YELLOW}Running Local CI Checks...${NC}"
             "$SCRIPTS_FOLDER/ci-local.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        8)
+        9)
             echo -e "\n${YELLOW}Running Project Version Bump...${NC}"
             "$SCRIPTS_FOLDER/bump-version.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
