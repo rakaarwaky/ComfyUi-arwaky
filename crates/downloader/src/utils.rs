@@ -87,7 +87,11 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
                 if let Ok(cache) = SIZE_CACHE.read() {
                     if let Some(&cached_size) = cache.sizes.get(url_str) {
                         if is_size_valid(cached_size) {
-                            return true;
+                            // Only trust cache as a ready-signal when we have no known expected size.
+                            // When expected_size is known, it remains the source of truth.
+                            if expected_size == 0 {
+                                return true;
+                            }
                         }
                     }
                 }
