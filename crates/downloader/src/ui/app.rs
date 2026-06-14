@@ -322,6 +322,7 @@ impl App {
             let agent = ureq::Agent::new_with_config(
                 ureq::config::Config::builder()
                     .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                    .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
                     .timeout_global(Some(std::time::Duration::from_secs(15)))
                     .build(),
             );
@@ -690,6 +691,7 @@ impl App {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct ChunkProgress {
     total_size: u64,
+    n_chunks: usize,
     chunk_offsets: Vec<u64>,
 }
 
@@ -716,7 +718,9 @@ pub fn download_one_model(
 
     let agent = ureq::Agent::new_with_config(
         ureq::config::Config::builder()
-            .timeout_connect(Some(std::time::Duration::from_secs(30)))
+            .timeout_connect(Some(std::time::Duration::from_secs(15)))
+            .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
+            .timeout_global(Some(std::time::Duration::from_secs(3600)))
             .build(),
     );
     let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
@@ -818,7 +822,10 @@ pub fn download_one_model(
         if progress_path.exists() && temp_path.exists() {
             if let Ok(content) = fs::read_to_string(&progress_path) {
                 if let Ok(p) = serde_json::from_str::<ChunkProgress>(&content) {
-                    if p.total_size == total_size && p.chunk_offsets.len() == n_chunks {
+                    if p.total_size == total_size
+                        && p.n_chunks == n_chunks
+                        && p.chunk_offsets.len() == n_chunks
+                    {
                         chunk_offsets = p.chunk_offsets;
                     }
                 }
@@ -855,7 +862,9 @@ pub fn download_one_model(
         // Shared agent for all chunk threads — reuses connection pool
         let shared_agent = Arc::new(ureq::Agent::new_with_config(
             ureq::config::Config::builder()
-                .timeout_connect(Some(std::time::Duration::from_secs(30)))
+                .timeout_connect(Some(std::time::Duration::from_secs(15)))
+                .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
+                .timeout_global(Some(std::time::Duration::from_secs(3600)))
                 .build(),
         ));
 
@@ -939,7 +948,7 @@ pub fn download_one_model(
         let mut last_progress_instant = Instant::now();
 
         const MAX_DOWNLOAD_SECONDS: u64 = 3600;
-        const STALL_TIMEOUT_SECONDS: u64 = 300;
+        const STALL_TIMEOUT_SECONDS: u64 = 60;
 
         let mut success = true;
         let mut final_err = None;
@@ -1017,6 +1026,7 @@ pub fn download_one_model(
                     .collect();
                 let progress = ChunkProgress {
                     total_size,
+                    n_chunks,
                     chunk_offsets: current_offsets,
                 };
                 if let Ok(content) = serde_json::to_string(&progress) {
@@ -1121,7 +1131,7 @@ pub fn download_one_model(
         let mut last_report = Instant::now();
         let mut last_progress_instant = start_time;
         const MAX_DOWNLOAD_SECONDS: u64 = 3600;
-        const STALL_TIMEOUT_SECONDS: u64 = 300;
+        const STALL_TIMEOUT_SECONDS: u64 = 60;
 
         loop {
             if cancel_token.load(Ordering::Acquire) {
