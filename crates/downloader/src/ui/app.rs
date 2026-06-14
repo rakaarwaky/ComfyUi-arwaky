@@ -454,7 +454,7 @@ impl App {
             total_selected
         ));
 
-        self.active_downloads = vec![None; 2]; // 2 workers
+        self.active_downloads = vec![None; 4]; // 4 workers
         self.completed_count = 0;
         self.failed_count = 0;
         self.total_to_download = total_selected;
@@ -465,7 +465,7 @@ impl App {
             let completed_lock = Arc::new(std::sync::Mutex::new(0));
             let failed_lock = Arc::new(std::sync::Mutex::new(0));
             let mut workers = Vec::new();
-            const N_WORKERS: usize = 2;
+            const N_WORKERS: usize = 4;
 
             for worker_id in 0..N_WORKERS {
                 let queue = queue.clone();
@@ -790,14 +790,23 @@ pub fn download_one_model(
     }
 
     if supports_ranges && total_size > 0 {
-        const N_CHUNKS: usize = 4;
+        // Dynamic chunk count based on file size
+        let n_chunks: usize = if total_size < 50 * 1024 * 1024 {
+            1 // <50MB: single stream
+        } else if total_size < 200 * 1024 * 1024 {
+            2 // <200MB: 2 chunks
+        } else if total_size < 1024 * 1024 * 1024 {
+            4 // <1GB: 4 chunks
+        } else {
+            8 // >=1GB: 8 chunks
+        };
         let progress_path = temp_path.with_extension("progress");
 
-        let chunk_size = total_size / N_CHUNKS as u64;
+        let chunk_size = total_size / n_chunks as u64;
         let mut chunks = Vec::new();
-        for i in 0..N_CHUNKS {
+        for i in 0..n_chunks {
             let start = i as u64 * chunk_size;
-            let end = if i == N_CHUNKS - 1 {
+            let end = if i == n_chunks - 1 {
                 total_size - 1
             } else {
                 (i as u64 + 1) * chunk_size - 1
@@ -805,11 +814,11 @@ pub fn download_one_model(
             chunks.push((start, end));
         }
 
-        let mut chunk_offsets = vec![0u64; N_CHUNKS];
+        let mut chunk_offsets = vec![0u64; n_chunks];
         if progress_path.exists() && temp_path.exists() {
             if let Ok(content) = fs::read_to_string(&progress_path) {
                 if let Ok(p) = serde_json::from_str::<ChunkProgress>(&content) {
-                    if p.total_size == total_size && p.chunk_offsets.len() == N_CHUNKS {
+                    if p.total_size == total_size && p.chunk_offsets.len() == n_chunks {
                         chunk_offsets = p.chunk_offsets;
                     }
                 }
@@ -819,7 +828,7 @@ pub fn download_one_model(
         // Validate actual file size on disk matches total_size if we think we are resuming
         let actual_file_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
         if actual_file_size != total_size {
-            chunk_offsets = vec![0u64; N_CHUNKS];
+            chunk_offsets = vec![0u64; n_chunks];
             let file = fs::OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -843,7 +852,14 @@ pub fn download_one_model(
         let mut handles = Vec::new();
         let thread_errors = Arc::new(Mutex::new(Vec::new()));
 
-        for i in 0..N_CHUNKS {
+        // Shared agent for all chunk threads — reuses connection pool
+        let shared_agent = Arc::new(ureq::Agent::new_with_config(
+            ureq::config::Config::builder()
+                .timeout_connect(Some(std::time::Duration::from_secs(30)))
+                .build(),
+        ));
+
+        for i in 0..n_chunks {
             let start = chunks[i].0;
             let end = chunks[i].1;
             let initial_offset = chunk_offsets[i];
@@ -860,16 +876,11 @@ pub fn download_one_model(
             let url = model.url.clone();
             let token_clone = token.clone();
             let thread_errors_clone = Arc::clone(&thread_errors);
+            let agent_clone = Arc::clone(&shared_agent);
 
             let handle = thread::spawn(move || {
                 let res = (|| -> Result<(), String> {
-                    let agent = ureq::Agent::new_with_config(
-                        ureq::config::Config::builder()
-                            .timeout_connect(Some(std::time::Duration::from_secs(30)))
-                            .build(),
-                    );
-
-                    let mut req = agent
+                    let mut req = agent_clone
                         .get(&url)
                         .header("User-Agent", "Mozilla/5.0")
                         .header("Range", &format!("bytes={}-{}", start_pos, end));
@@ -885,7 +896,7 @@ pub fn download_one_model(
                     }
 
                     let mut reader = response.into_body().into_reader();
-                    let mut buf = vec![0u8; 128 * 1024];
+                    let mut buf = vec![0u8; 512 * 1024];
                     let mut bytes_downloaded_this_session = 0u64;
 
                     loop {
@@ -1104,7 +1115,7 @@ pub fn download_one_model(
         let file = file.map_err(|e| e.to_string())?;
         let mut writer = std::io::BufWriter::new(file);
         let mut reader = response.into_body().into_reader();
-        let mut buf = vec![0u8; 128 * 1024];
+        let mut buf = vec![0u8; 512 * 1024];
         let mut downloaded: u64 = if is_partial { current_size } else { 0 };
         let start_time = Instant::now();
         let mut last_report = Instant::now();
