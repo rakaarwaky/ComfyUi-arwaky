@@ -8,9 +8,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::config::Config;
+use crate::downloader::{download_diffusers_bg, DownloadEvent};
 use crate::model::Model;
 use crate::utils::{file_exists_valid, format_size, get_available_space};
-use crate::downloader::{DownloadEvent, download_diffusers_bg};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActiveDownload {
@@ -60,7 +60,7 @@ pub struct App {
     pub state: AppState,
     pub rx: Option<Receiver<DownloadEvent>>,
     pub cancel_token: Arc<AtomicBool>,
-    
+
     // Search Mode
     pub input_mode: InputMode,
     pub search_query: String,
@@ -78,7 +78,7 @@ impl App {
         if !models.is_empty() {
             list_state.select(Some(0));
         }
-        
+
         let mut cats: Vec<String> = models.iter().map(|m| m.category.clone()).collect();
         cats.sort();
         cats.dedup();
@@ -126,9 +126,8 @@ impl App {
     }
 
     pub fn save_config_to_file(&self) -> std::io::Result<()> {
-        let content = serde_yaml::to_string(&self.config)
-            .map_err(std::io::Error::other)?;
-        
+        let content = serde_yaml::to_string(&self.config).map_err(std::io::Error::other)?;
+
         // Save to local config.yaml
         let _ = fs::write("config.yaml", &content);
 
@@ -148,17 +147,20 @@ impl App {
                 // 1. Filter by Tab selection
                 let match_tab = match self.active_tab {
                     0 => true, // All
-                    1 => {     // Installed
+                    1 => {
+                        // Installed
                         let dest_dir = self.config.resolve_category_dir(&m.category);
                         let dest_path = dest_dir.join(&m.filename);
                         file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
                     }
-                    2 => {     // Missing
+                    2 => {
+                        // Missing
                         let dest_dir = self.config.resolve_category_dir(&m.category);
                         let dest_path = dest_dir.join(&m.filename);
                         !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
                     }
-                    _ => {     // Category index
+                    _ => {
+                        // Category index
                         let cat_idx = self.active_tab - 3;
                         if cat_idx < self.categories.len() {
                             m.category.eq_ignore_ascii_case(&self.categories[cat_idx])
@@ -167,7 +169,7 @@ impl App {
                         }
                     }
                 };
-                
+
                 if !match_tab {
                     return false;
                 }
@@ -219,7 +221,11 @@ impl App {
             }
         }
         let grp_name = group.unwrap_or("All Missing");
-        self.add_log(&format!("Bulk selected group '{}' ({} items selected).", grp_name, self.selected_indices.len()));
+        self.add_log(&format!(
+            "Bulk selected group '{}' ({} items selected).",
+            grp_name,
+            self.selected_indices.len()
+        ));
     }
 
     pub fn select_all_missing_in_view(&mut self) {
@@ -235,7 +241,10 @@ impl App {
                 count += 1;
             }
         }
-        self.add_log(&format!("Selected {} missing models in current view.", count));
+        self.add_log(&format!(
+            "Selected {} missing models in current view.",
+            count
+        ));
     }
 
     pub fn check_space_and_start(&mut self) {
@@ -337,8 +346,7 @@ impl App {
                         invalid += 1;
                         self.add_log(&format!(
                             "Invalid link for {} (HTTP {}).",
-                            model.filename,
-                            status
+                            model.filename, status
                         ));
                     }
                 }
@@ -390,7 +398,10 @@ impl App {
         let cancel_token = self.cancel_token.clone();
         let total_selected = selected_models.len();
 
-        self.add_log(&format!("Starting download task queue of {} items.", total_selected));
+        self.add_log(&format!(
+            "Starting download task queue of {} items.",
+            total_selected
+        ));
 
         self.state = AppState::Downloading {
             active_downloads: vec![None; 2], // 2 workers
@@ -415,67 +426,65 @@ impl App {
                 let completed_lock = completed_lock.clone();
                 let failed_lock = failed_lock.clone();
 
-                let handle = std::thread::spawn(move || {
-                    loop {
-                        let next_item = {
-                            let mut lock = queue.lock().unwrap();
-                            if lock.is_empty() {
-                                None
-                            } else {
-                                Some(lock.remove(0))
-                            }
-                        };
+                let handle = std::thread::spawn(move || loop {
+                    let next_item = {
+                        let mut lock = queue.lock().unwrap();
+                        if lock.is_empty() {
+                            None
+                        } else {
+                            Some(lock.remove(0))
+                        }
+                    };
 
-                        let Some((_orig_idx, model)) = next_item else {
-                            break;
-                        };
+                    let Some((_orig_idx, model)) = next_item else {
+                        break;
+                    };
 
+                    if cancel_token.load(Ordering::Acquire) {
+                        break;
+                    }
+
+                    let _ = tx.send(DownloadEvent::Start {
+                        worker_id,
+                        filename: model.filename.clone(),
+                    });
+
+                    let mut success = false;
+                    let mut last_error = None;
+                    for attempt in 1..=3 {
                         if cancel_token.load(Ordering::Acquire) {
                             break;
                         }
 
-                        let _ = tx.send(DownloadEvent::Start {
-                            worker_id,
-                            filename: model.filename.clone(),
-                        });
-
-                        let mut success = false;
-                        let mut last_error = None;
-                        for attempt in 1..=3 {
-                            if cancel_token.load(Ordering::Acquire) {
+                        match download_one_model(worker_id, &model, &config, &cancel_token, &tx) {
+                            Ok(_) => {
+                                success = true;
+                                last_error = None;
                                 break;
                             }
-
-                            match download_one_model(worker_id, &model, &config, &cancel_token, &tx) {
-                                Ok(_) => {
-                                    success = true;
-                                    last_error = None;
+                            Err(e) => {
+                                last_error = Some(e);
+                                if cancel_token.load(Ordering::Acquire) {
                                     break;
                                 }
-                                Err(e) => {
-                                    last_error = Some(e);
-                                    if cancel_token.load(Ordering::Acquire) {
-                                        break;
-                                    }
-                                    std::thread::sleep(Duration::from_secs(attempt * 2));
-                                }
+                                std::thread::sleep(Duration::from_secs(attempt * 2));
                             }
                         }
+                    }
 
-                        let _ = tx.send(DownloadEvent::ModelFinished {
-                            worker_id,
-                            filename: model.filename.clone(),
-                            success,
-                            error_msg: last_error,
-                        });
+                    let _ = tx.send(DownloadEvent::ModelFinished {
+                        worker_id,
+                        filename: model.filename.clone(),
+                        success,
+                        error_msg: last_error,
+                    });
 
-                        if success {
-                            let mut c = completed_lock.lock().unwrap();
-                            *c += 1;
-                        } else {
-                            let mut f = failed_lock.lock().unwrap();
-                            *f += 1;
-                        }
+                    if success {
+                        let mut c = completed_lock.lock().unwrap();
+                        *c += 1;
+                    } else {
+                        let mut f = failed_lock.lock().unwrap();
+                        *f += 1;
                     }
                 });
                 workers.push(handle);
@@ -506,7 +515,11 @@ impl App {
                     worker_id,
                     filename,
                 } => {
-                    self.add_log(&format!("Worker #{}: Starting download for {}", worker_id + 1, filename));
+                    self.add_log(&format!(
+                        "Worker #{}: Starting download for {}",
+                        worker_id + 1,
+                        filename
+                    ));
                     if let AppState::Downloading {
                         ref mut active_downloads,
                         ..
@@ -555,8 +568,16 @@ impl App {
                     if success {
                         self.add_log(&format!("Worker #{}: Finished {}", worker_id + 1, filename));
                     } else {
-                        let err_suffix = error_msg.as_ref().map(|e| format!(": {}", e)).unwrap_or_default();
-                        self.add_log(&format!("Worker #{}: Failed to download {}{}", worker_id + 1, filename, err_suffix));
+                        let err_suffix = error_msg
+                            .as_ref()
+                            .map(|e| format!(": {}", e))
+                            .unwrap_or_default();
+                        self.add_log(&format!(
+                            "Worker #{}: Failed to download {}{}",
+                            worker_id + 1,
+                            filename,
+                            err_suffix
+                        ));
                     }
                     if let AppState::Downloading {
                         ref mut active_downloads,
@@ -576,14 +597,14 @@ impl App {
                     }
                 }
                 DownloadEvent::AllComplete { completed, failed } => {
-                    self.add_log(&format!("Task queue complete. Successfully finished: {}, Failed/Incomplete: {}", completed, failed));
+                    self.add_log(&format!(
+                        "Task queue complete. Successfully finished: {}, Failed/Incomplete: {}",
+                        completed, failed
+                    ));
                     self.state = AppState::Finished {
                         completed,
                         failed,
-                        message: format!(
-                            "Finished! Completed: {}, Failed: {}",
-                            completed, failed
-                        ),
+                        message: format!("Finished! Completed: {}, Failed: {}", completed, failed),
                     };
                     self.selected_indices.clear();
                     should_clear_rx = true;
@@ -640,7 +661,7 @@ pub fn download_one_model(
     );
 
     let mut req = agent.get(&model.url).header("User-Agent", "Mozilla/5.0");
-    
+
     let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
     if let Some(t) = token {
         req = req.header("Authorization", &format!("Bearer {}", t));
@@ -682,9 +703,7 @@ pub fn download_one_model(
     };
 
     let file = if is_partial {
-        fs::OpenOptions::new()
-            .append(true)
-            .open(&temp_path)
+        fs::OpenOptions::new().append(true).open(&temp_path)
     } else {
         fs::OpenOptions::new()
             .write(true)

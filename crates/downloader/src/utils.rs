@@ -20,9 +20,9 @@ pub fn format_size(bytes: u64) -> String {
 }
 
 use std::collections::HashMap;
-use std::sync::RwLock;
-use std::sync::LazyLock;
 use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::RwLock;
 
 pub struct SizeCache {
     pub sizes: HashMap<String, u64>,
@@ -30,9 +30,9 @@ pub struct SizeCache {
 
 impl SizeCache {
     pub fn cache_path() -> Option<PathBuf> {
-        std::env::var("HOME").ok().map(|home| {
-            PathBuf::from(home).join(".cache/comfyui-downloader/size_cache.json")
-        })
+        std::env::var("HOME")
+            .ok()
+            .map(|home| PathBuf::from(home).join(".cache/comfyui-downloader/size_cache.json"))
     }
 
     pub fn load() -> Self {
@@ -62,9 +62,8 @@ impl SizeCache {
     }
 }
 
-pub static SIZE_CACHE: LazyLock<RwLock<SizeCache>> = LazyLock::new(|| {
-    RwLock::new(SizeCache::load())
-});
+pub static SIZE_CACHE: LazyLock<RwLock<SizeCache>> =
+    LazyLock::new(|| RwLock::new(SizeCache::load()));
 
 pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> bool {
     if !path.exists() {
@@ -125,7 +124,7 @@ pub fn get_available_space(path: &Path) -> std::io::Result<u64> {
     let mut stats = std::mem::MaybeUninit::<libc::statvfs>::uninit();
     let c_path = CString::new(check_path.as_os_str().as_bytes())
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
-    
+
     let res = unsafe { libc::statvfs(c_path.as_ptr(), stats.as_mut_ptr()) };
     if res == 0 {
         let stats = unsafe { stats.assume_init() };

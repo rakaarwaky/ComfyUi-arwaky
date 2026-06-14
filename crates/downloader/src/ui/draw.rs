@@ -5,8 +5,8 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
-use crate::utils::{file_exists_valid, format_size};
 use super::app::{App, AppState, InputMode};
+use crate::utils::{file_exists_valid, format_size};
 
 pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     let size = f.size();
@@ -20,7 +20,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     };
 
     let outer_block = Block::default()
-        .title(format!(" ComfyUI Desktop Model Downloader v2.2 (Ratatui TUI){} ", title_suffix))
+        .title(format!(
+            " ComfyUI Desktop Model Downloader v2.2 (Ratatui TUI){} ",
+            title_suffix
+        ))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
     f.render_widget(outer_block, size);
@@ -64,7 +67,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             };
 
             let style = if actual_idx == app.active_tab {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED)
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::UNDERLINED)
             } else {
                 Style::default().fg(Color::Gray)
             };
@@ -94,7 +100,12 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
 
     let tab_paragraph = Paragraph::new(vec![
         Line::from(tab_spans),
-        Line::from(Span::styled(active_label, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            active_label,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
     ])
     .block(Block::default().borders(Borders::BOTTOM));
 
@@ -125,9 +136,15 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             };
 
             let status_span = if exists {
-                Span::styled(" READY ", Style::default().bg(Color::Green).fg(Color::Black))
+                Span::styled(
+                    " READY ",
+                    Style::default().bg(Color::Green).fg(Color::Black),
+                )
             } else {
-                Span::styled(" MISSING ", Style::default().bg(Color::Red).fg(Color::White))
+                Span::styled(
+                    " MISSING ",
+                    Style::default().bg(Color::Red).fg(Color::White),
+                )
             };
 
             let size = if m.size_bytes > 0 {
@@ -142,7 +159,11 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 Span::raw(prefix),
                 Span::styled(
                     format!("{:<45}", format!("{}/{}", m.category, m.filename)),
-                    Style::default().fg(if exists { Color::DarkGray } else { Color::White }),
+                    Style::default().fg(if exists {
+                        Color::DarkGray
+                    } else {
+                        Color::White
+                    }),
                 ),
                 Span::raw(format!(" {:>10}  ", format_size(size))),
                 status_span,
@@ -153,7 +174,11 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().title(" Model List (Space to toggle) ").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(" Model List (Space to toggle) ")
+                .borders(Borders::ALL),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::Rgb(30, 41, 59))
@@ -201,7 +226,11 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     };
 
     let details_paragraph = Paragraph::new(details_text)
-        .block(Block::default().title(" Selected Model Info ").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(" Selected Model Info ")
+                .borders(Borders::ALL),
+        )
         .wrap(Wrap { trim: true });
     f.render_widget(details_paragraph, right_rects[0]);
 
@@ -211,7 +240,11 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                       - Keep batch size to 1 for FLUX, max 2-3 for SDXL.\n\
                       - Set HSA_OVERRIDE_GFX_VERSION=10.3.0 in environment.";
     let guide_paragraph = Paragraph::new(guide_text)
-        .block(Block::default().title(" GPU Optimization Guide ").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(" GPU Optimization Guide ")
+                .borders(Borders::ALL),
+        )
         .wrap(Wrap { trim: true });
     f.render_widget(guide_paragraph, right_rects[1]);
 
@@ -239,7 +272,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     };
     let footer_paragraph = Paragraph::new(Span::styled(
         help_text,
-        Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Black)
+            .bg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
     ))
     .style(Style::default().bg(Color::Cyan));
     f.render_widget(footer_paragraph, inner_rect[2]);
@@ -255,13 +291,31 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             let popup_rect = centered_rect(65, 45, size);
             f.render_widget(Clear, popup_rect);
 
-            let active_style = Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD);
+            let active_style = Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD);
             let inactive_style = Style::default().fg(Color::Gray);
 
-            let dir_style = if active_field == 0 { active_style } else { inactive_style };
-            let token_style = if active_field == 1 { active_style } else { inactive_style };
-            let save_style = if active_field == 2 { active_style } else { inactive_style };
-            let cancel_style = if active_field == 3 { active_style } else { inactive_style };
+            let dir_style = if active_field == 0 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let token_style = if active_field == 1 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let save_style = if active_field == 2 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let cancel_style = if active_field == 3 {
+                active_style
+            } else {
+                inactive_style
+            };
 
             let settings_spans = vec![
                 Line::from(vec![
@@ -299,12 +353,18 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 .wrap(Wrap { trim: true });
             f.render_widget(settings_paragraph, popup_rect);
         }
-        AppState::DiskSpaceWarning { required, available } => {
+        AppState::DiskSpaceWarning {
+            required,
+            available,
+        } => {
             let popup_rect = centered_rect(65, 30, size);
             f.render_widget(Clear, popup_rect);
 
             let warning_spans = vec![
-                Line::from(Span::styled("⚠️ INSUFFICIENT DISK SPACE WARNING ⚠️", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))),
+                Line::from(Span::styled(
+                    "⚠️ INSUFFICIENT DISK SPACE WARNING ⚠️",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                )),
                 Line::from(""),
                 Line::from(format!("Available Space: {}", format_size(available))),
                 Line::from(format!("Total Required:  {}", format_size(required))),
@@ -314,7 +374,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 Line::from(""),
                 Line::from(vec![
                     Span::raw("   "),
-                    Span::styled("  [ PROCEED ]  ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  [ PROCEED ]  ",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw("      "),
                     Span::styled("  [ CANCEL ]  ", Style::default().fg(Color::Gray)),
                 ]),
@@ -346,7 +409,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                     failed_count,
                     total_to_download.saturating_sub(completed_count + failed_count),
                 )),
-                Line::from(format!("Workers: {} Active", active_downloads.iter().filter(|x| x.is_some()).count())),
+                Line::from(format!(
+                    "Workers: {} Active",
+                    active_downloads.iter().filter(|x| x.is_some()).count()
+                )),
                 Line::from(""),
             ];
 
@@ -359,7 +425,12 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                     };
                     let bar_width = 25;
                     let bar = draw_progress_bar(pct, bar_width);
-                    progress_lines.push(Line::from(format!("  Worker #{}: {} {}", w_id + 1, dl.filename, bar)));
+                    progress_lines.push(Line::from(format!(
+                        "  Worker #{}: {} {}",
+                        w_id + 1,
+                        dl.filename,
+                        bar
+                    )));
                     progress_lines.push(Line::from(format!(
                         "    Progress: {}/{} | Speed: {:.2} MB/s | ETA: {}s",
                         format_size(dl.bytes_downloaded),
@@ -368,13 +439,16 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                         dl.eta_secs
                     )));
                 } else {
-                    progress_lines.push(Line::from(format!("  Worker #{}: Idle / Waiting for task...", w_id + 1)));
+                    progress_lines.push(Line::from(format!(
+                        "  Worker #{}: Idle / Waiting for task...",
+                        w_id + 1
+                    )));
                     progress_lines.push(Line::from(""));
                 }
                 progress_lines.push(Line::from(""));
             }
 
-            let used_lines = progress_lines.len() + 2; 
+            let used_lines = progress_lines.len() + 2;
             let needed_padding = (popup_rect.height as usize).saturating_sub(used_lines + 2);
             for _ in 0..needed_padding {
                 progress_lines.push(Line::from(""));
@@ -382,16 +456,18 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
 
             progress_lines.push(Line::from(vec![
                 Span::raw("   "),
-                Span::styled("  [ CANCEL DOWNLOAD ]  ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "  [ CANCEL DOWNLOAD ]  ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
             ]));
 
-            let progress_paragraph = Paragraph::new(progress_lines)
-                .block(
-                    Block::default()
-                        .title(" Multi-Worker Download Queue ")
-                        .borders(Borders::ALL)
-                        .border_style(Style::default().fg(Color::Yellow)),
-                );
+            let progress_paragraph = Paragraph::new(progress_lines).block(
+                Block::default()
+                    .title(" Multi-Worker Download Queue ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            );
             f.render_widget(progress_paragraph, popup_rect);
         }
         AppState::Finished {
@@ -403,14 +479,24 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             f.render_widget(Clear, popup_rect);
 
             let finished_spans = vec![
-                Line::from(Span::styled(message.clone(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))),
+                Line::from(Span::styled(
+                    message.clone(),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                )),
                 Line::from(""),
                 Line::from(format!("Completed successfully: {}", completed)),
                 Line::from(format!("Failed/Incomplete: {}", failed)),
                 Line::from(""),
                 Line::from(vec![
                     Span::raw("   "),
-                    Span::styled("  [ OK ]  ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  [ OK ]  ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                 ]),
             ];
 
@@ -431,12 +517,7 @@ fn draw_progress_bar(pct: u16, width: u16) -> String {
     let filled = ((pct as f32 / 100.0) * width as f32).round() as usize;
     let filled = std::cmp::min(filled, width as usize);
     let empty = (width as usize).saturating_sub(filled);
-    format!(
-        "[{}{}] {}%",
-        "█".repeat(filled),
-        "░".repeat(empty),
-        pct
-    )
+    format!("[{}{}] {}%", "█".repeat(filled), "░".repeat(empty), pct)
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

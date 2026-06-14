@@ -13,7 +13,7 @@ pub mod app;
 pub mod draw;
 pub mod event;
 
-pub use app::{App, AppState, InputMode, ActiveDownload};
+pub use app::{ActiveDownload, App, AppState, InputMode};
 pub use draw::draw_ui;
 pub use event::handle_event;
 
@@ -42,7 +42,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let dest_path = dest_dir.join(&m.filename);
                 if dest_path.is_file() {
                     let needs_verification = {
-                        let actual_size = fs::metadata(&dest_path).map(|meta| meta.len()).unwrap_or(0);
+                        let actual_size =
+                            fs::metadata(&dest_path).map(|meta| meta.len()).unwrap_or(0);
                         if actual_size > 0 {
                             let is_standard_valid = if m.size_bytes <= 1_000_000 {
                                 actual_size >= 1000
@@ -50,9 +51,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                                 let min_allowed = (m.size_bytes as f64 * 0.95) as u64;
                                 actual_size >= min_allowed
                             };
-                            
+
                             if !is_standard_valid || m.size_bytes == 0 {
-                                let has_cached = if let Ok(cache) = crate::utils::SIZE_CACHE.read() {
+                                let has_cached = if let Ok(cache) = crate::utils::SIZE_CACHE.read()
+                                {
                                     cache.sizes.contains_key(&m.url)
                                 } else {
                                     false
@@ -82,7 +84,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                                     .and_then(|v| v.to_str().ok())
                                     .and_then(|v| v.parse().ok())
                                     .unwrap_or(0);
-                                
+
                                 if response_len > 0 {
                                     if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
                                         cache.sizes.insert(m.url.clone(), response_len);
@@ -137,14 +139,20 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "{:<55} {:>12} {}",
                         format!("{}/{}", m.category, m.filename),
                         format_size(size),
-                        if exists { "\x1b[32m✓ READY\x1b[0m" } else { "\x1b[31m✗ MISSING\x1b[0m" }
+                        if exists {
+                            "\x1b[32m✓ READY\x1b[0m"
+                        } else {
+                            "\x1b[31m✗ MISSING\x1b[0m"
+                        }
                     );
                 }
                 return Ok(());
             }
             "--recommend" | "--rx6800xt" | "--amd" => {
                 println!("RX6800XT 16GB VRAM - Optimal Settings Guide\n");
-                println!("FLUX Dev (Text-to-Image) GGUF Recommended: flux1-dev-Q5_K_S.gguf (~8.3 GB)");
+                println!(
+                    "FLUX Dev (Text-to-Image) GGUF Recommended: flux1-dev-Q5_K_S.gguf (~8.3 GB)"
+                );
                 println!("FLUX Fill (Inpaint/Outpaint) GGUF Recommended: flux1-fill-dev-Q4_K_S.gguf (~12 GB)");
                 return Ok(());
             }

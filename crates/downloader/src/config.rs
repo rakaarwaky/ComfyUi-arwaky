@@ -65,7 +65,9 @@ pub fn load_config() -> Config {
                     let out_path = PathBuf::from(out_dir);
                     if let Some(parent) = out_path.parent() {
                         let inferred = parent.join("Models");
-                        if let Ok(mut parsed_default) = serde_yaml::from_str::<Config>(default_cfg_str) {
+                        if let Ok(mut parsed_default) =
+                            serde_yaml::from_str::<Config>(default_cfg_str)
+                        {
                             parsed_default.models_dir = inferred.to_string_lossy().to_string();
                             return parsed_default;
                         }
@@ -86,7 +88,10 @@ pub fn load_config() -> Config {
     }
 
     let default_models_dir = if let Ok(home) = std::env::var("HOME") {
-        PathBuf::from(home).join("SharedData/Models").to_string_lossy().to_string()
+        PathBuf::from(home)
+            .join("SharedData/Models")
+            .to_string_lossy()
+            .to_string()
     } else {
         "./Models".to_string()
     };
