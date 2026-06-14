@@ -93,6 +93,9 @@ pub fn handle_event(
                                 KeyCode::Char('a') | KeyCode::Char('A') => {
                                     app.select_all_missing_in_view();
                                 }
+                                KeyCode::Char('r') | KeyCode::Char('R') => {
+                                    app.refresh_selected_or_all_model_sizes();
+                                }
                                 KeyCode::Char(c) if c.is_ascii_digit() => {
                                     let digit = c.to_digit(10).unwrap() as usize;
                                     let total_pages = 3 + app.categories.len();
@@ -279,20 +282,22 @@ pub fn handle_event(
                         else if mouse.row == inner_rect[2].y {
                             let col = mouse.column.saturating_sub(inner_rect[2].x);
                             if app.input_mode == InputMode::Normal {
-                                if col >= 49 && col <= 76 {
-                                    app.select_all_missing_in_view();
-                                } else if col >= 77 && col <= 93 {
+                                if col >= 56 && col <= 74 {
                                     app.input_mode = InputMode::Search;
-                                } else if col >= 94 && col <= 112 {
+                                } else if col >= 75 && col <= 101 {
+                                    app.select_all_missing_in_view();
+                                } else if col >= 102 && col <= 117 {
+                                    app.refresh_selected_or_all_model_sizes();
+                                } else if col >= 118 && col <= 134 {
                                     app.state = AppState::Settings {
                                         active_field: 0,
                                         models_dir_input: app.config.models_dir.clone(),
                                         hf_token_input: app.config.hf_token.clone().unwrap_or_default(),
                                     };
                                     app.add_log("Settings menu opened.");
-                                } else if col >= 113 && col <= 137 {
+                                } else if col >= 135 && col <= 154 {
                                     app.check_space_and_start();
-                                } else if col >= 138 {
+                                } else if col >= 155 {
                                     return Ok(false); // Exit downloader
                                 }
                             }

@@ -235,7 +235,7 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     let help_text = if app.input_mode == InputMode::Search {
         "  [Type to Search]  |  [Enter/Esc] to exit search mode  |  [Backspace] to delete  "
     } else {
-        "  [Click Tabs/Items]  |  [Tab/Shift+Tab] Cycle Tabs  |  [Space] Toggle  |  [a] Select All Missing  |  [c] Settings  |  [Enter/d] Download  "
+        "  [Click Tabs/Items]  |  [Tab/Shift+Tab] Cycle Tabs  |  [Space] Toggle  |  [a] Select All Missing  |  [r] Refresh  |  [c] Settings  |  [Enter/d] Download  "
     };
     let footer_paragraph = Paragraph::new(Span::styled(
         help_text,

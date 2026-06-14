@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::model::Model;
-use crate::utils::{file_exists_valid, get_available_space};
+use crate::utils::{file_exists_valid, format_size, get_available_space};
 use crate::downloader::{DownloadEvent, download_diffusers_bg};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -268,6 +268,93 @@ impl App {
         }
     }
 
+    pub fn refresh_selected_or_all_model_sizes(&mut self) {
+        if matches!(self.state, AppState::Downloading { .. }) {
+            self.add_log("Refresh skipped: download queue is already running.");
+            return;
+        }
+
+        let indices: Vec<usize> = if self.selected_indices.is_empty() {
+            (0..self.models.len()).collect()
+        } else {
+            self.selected_indices.clone()
+        };
+
+        let config = self.config.clone();
+        let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+        let agent = ureq::Agent::new_with_config(
+            ureq::config::Config::builder()
+                .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                .timeout_global(Some(std::time::Duration::from_secs(10)))
+                .build(),
+        );
+
+        let mut valid = 0usize;
+        let mut invalid = 0usize;
+        let mut unknown_size = 0usize;
+
+        for idx in indices {
+            let Some(model) = self.models.get(idx).cloned() else {
+                continue;
+            };
+
+            let mut req = agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
+            if let Some(t) = &token {
+                req = req.header("Authorization", &format!("Bearer {}", t));
+            }
+
+            match req.call() {
+                Ok(res) => {
+                    let status = res.status().as_u16();
+                    if status == 200 || status == 206 {
+                        let size = res
+                            .headers()
+                            .get("Content-Length")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse::<u64>().ok())
+                            .unwrap_or(0);
+
+                        if size > 0 {
+                            self.models[idx].size_bytes = size;
+                            if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
+                                cache.sizes.insert(model.url.clone(), size);
+                                cache.save();
+                            }
+                            valid += 1;
+                            self.add_log(&format!(
+                                "Refreshed size for {}: {}",
+                                model.filename,
+                                format_size(size)
+                            ));
+                        } else {
+                            unknown_size += 1;
+                            self.add_log(&format!(
+                                "Valid link for {}, but size is unknown.",
+                                model.filename
+                            ));
+                        }
+                    } else {
+                        invalid += 1;
+                        self.add_log(&format!(
+                            "Invalid link for {} (HTTP {}).",
+                            model.filename,
+                            status
+                        ));
+                    }
+                }
+                Err(e) => {
+                    invalid += 1;
+                    self.add_log(&format!("Invalid link for {}: {}", model.filename, e));
+                }
+            }
+        }
+
+        self.add_log(&format!(
+            "Refresh complete: {} valid, {} invalid, {} unknown size.",
+            valid, invalid, unknown_size
+        ));
+    }
+
     pub fn start_download(&mut self) {
         if self.selected_indices.is_empty() {
             return;
@@ -277,11 +364,27 @@ impl App {
         let (tx, rx) = channel();
         self.rx = Some(rx);
 
-        let selected_models: Vec<(usize, Model)> = self
+        let cache_sizes = crate::utils::SIZE_CACHE
+            .read()
+            .ok()
+            .map(|cache| cache.sizes.clone())
+            .unwrap_or_default();
+
+        let mut selected_models: Vec<(usize, Model)> = self
             .selected_indices
             .iter()
             .map(|&idx| (idx, self.models[idx].clone()))
             .collect();
+
+        selected_models.sort_by(|(_, left), (_, right)| {
+            let left_size = model_sort_size(left, &cache_sizes);
+            let right_size = model_sort_size(right, &cache_sizes);
+            left_size
+                .cmp(&right_size)
+                .then_with(|| left.filename.cmp(&right.filename))
+        });
+
+        self.add_log("Download queue sorted smallest-to-largest by model size.");
 
         let config = self.config.clone();
         let cancel_token = self.cancel_token.clone();
@@ -667,6 +770,14 @@ pub fn download_one_model(
     }
 
     Ok(())
+}
+
+fn model_sort_size(model: &Model, cache_sizes: &std::collections::HashMap<String, u64>) -> u64 {
+    if model.size_bytes > 0 {
+        model.size_bytes
+    } else {
+        cache_sizes.get(&model.url).copied().unwrap_or(0)
+    }
 }
 
 pub(super) fn get_time_str() -> String {
