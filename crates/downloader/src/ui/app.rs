@@ -483,7 +483,7 @@ impl App {
             total_selected
         ));
 
-        self.active_downloads = vec![None; 2]; // 2 workers
+        self.active_downloads = vec![None; 1]; // 1 worker (sequential)
         self.completed_count = 0;
         self.failed_count = 0;
         self.total_to_download = total_selected;
@@ -498,9 +498,9 @@ impl App {
             let queue = Arc::new(std::sync::Mutex::new(selected_models));
             let completed_lock = Arc::new(std::sync::Mutex::new(0));
             let failed_lock = Arc::new(std::sync::Mutex::new(0));
-            let mut workers = Vec::new();
-            const N_WORKERS: usize = 2;
 
+            let mut workers = Vec::new();
+            const N_WORKERS: usize = 1;
             for worker_id in 0..N_WORKERS {
                 let queue = queue.clone();
                 let config = config.clone();
