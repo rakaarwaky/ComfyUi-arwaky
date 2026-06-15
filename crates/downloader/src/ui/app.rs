@@ -61,6 +61,10 @@ pub struct App {
     pub input_mode: InputMode,
     pub search_query: String,
 
+    // Cached filtered list
+    pub filtered_cache: Vec<(usize, Model)>,
+    pub filtered_cache_dirty: bool,
+
     // TUI UX enhancements
     pub logs: Vec<String>,
     pub active_tab: usize,
@@ -95,6 +99,8 @@ impl App {
             cancel_token: Arc::new(AtomicBool::new(false)),
             input_mode: InputMode::Normal,
             search_query: String::new(),
+            filtered_cache: Vec::new(),
+            filtered_cache_dirty: true,
             logs: Vec::new(),
             active_tab: 0,
             tab_offset: 0,
@@ -130,7 +136,27 @@ impl App {
             }
         }
     }
+}
 
+pub fn trace_log(msg: &str) {
+    let timestamp = get_time_str();
+    let log_line = format!("[{}] [TRACE] {}", timestamp, msg);
+    if let Some(path) = crate::utils::SizeCache::cache_path() {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+            let log_file_path = parent.join("downloader.log");
+            if let Ok(mut file) = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_file_path)
+            {
+                let _ = writeln!(file, "{}", log_line);
+            }
+        }
+    }
+}
+
+impl App {
     pub fn save_config_to_file(&self) -> std::io::Result<()> {
         let content = serde_yaml::to_string(&self.config).map_err(std::io::Error::other)?;
 
@@ -145,53 +171,55 @@ impl App {
         Ok(())
     }
 
-    pub fn filtered_models(&self) -> Vec<(usize, Model)> {
-        self.models
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| {
-                // 1. Filter by Tab selection
-                let match_tab = match self.active_tab {
-                    0 => true, // All
-                    1 => {
-                        // Installed
-                        let dest_dir = self.config.resolve_category_dir(&m.category);
-                        let dest_path = dest_dir.join(&m.filename);
-                        file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
-                    }
-                    2 => {
-                        // Missing
-                        let dest_dir = self.config.resolve_category_dir(&m.category);
-                        let dest_path = dest_dir.join(&m.filename);
-                        !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
-                    }
-                    _ => {
-                        // Category index
-                        let cat_idx = self.active_tab - 3;
-                        if cat_idx < self.categories.len() {
-                            m.category.eq_ignore_ascii_case(&self.categories[cat_idx])
-                        } else {
-                            true
+    pub fn mark_filtered_dirty(&mut self) {
+        self.filtered_cache_dirty = true;
+    }
+
+    pub fn filtered_models(&mut self) -> Vec<(usize, Model)> {
+        if self.filtered_cache_dirty {
+            self.filtered_cache = self
+                .models
+                .iter()
+                .enumerate()
+                .filter(|(_, m)| {
+                    let match_tab = match self.active_tab {
+                        0 => true,
+                        1 => {
+                            let dest_dir = self.config.resolve_category_dir(&m.category);
+                            let dest_path = dest_dir.join(&m.filename);
+                            file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
                         }
+                        2 => {
+                            let dest_dir = self.config.resolve_category_dir(&m.category);
+                            let dest_path = dest_dir.join(&m.filename);
+                            !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
+                        }
+                        _ => {
+                            let cat_idx = self.active_tab - 3;
+                            if cat_idx < self.categories.len() {
+                                m.category.eq_ignore_ascii_case(&self.categories[cat_idx])
+                            } else {
+                                true
+                            }
+                        }
+                    };
+                    if !match_tab {
+                        return false;
                     }
-                };
-
-                if !match_tab {
-                    return false;
-                }
-
-                // 2. Filter by search input
-                if self.search_query.is_empty() {
-                    true
-                } else {
-                    let query = self.search_query.to_lowercase();
-                    m.filename.to_lowercase().contains(&query)
-                        || m.category.to_lowercase().contains(&query)
-                        || m.group.to_lowercase().contains(&query)
-                }
-            })
-            .map(|(idx, m)| (idx, m.clone()))
-            .collect()
+                    if self.search_query.is_empty() {
+                        true
+                    } else {
+                        let query = self.search_query.to_lowercase();
+                        m.filename.to_lowercase().contains(&query)
+                            || m.category.to_lowercase().contains(&query)
+                            || m.group.to_lowercase().contains(&query)
+                    }
+                })
+                .map(|(idx, m)| (idx, m.clone()))
+                .collect();
+            self.filtered_cache_dirty = false;
+        }
+        self.filtered_cache.clone()
     }
 
     pub fn toggle_selection(&mut self) {
@@ -322,7 +350,7 @@ impl App {
             let agent = ureq::Agent::new_with_config(
                 ureq::config::Config::builder()
                     .timeout_connect(Some(std::time::Duration::from_secs(10)))
-                    .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
+                    .timeout_recv_body(Some(std::time::Duration::from_secs(120)))
                     .timeout_global(Some(std::time::Duration::from_secs(15)))
                     .build(),
             );
@@ -455,18 +483,23 @@ impl App {
             total_selected
         ));
 
-        self.active_downloads = vec![None; 4]; // 4 workers
+        self.active_downloads = vec![None; 2]; // 2 workers
         self.completed_count = 0;
         self.failed_count = 0;
         self.total_to_download = total_selected;
 
         // Coordinator thread
         std::thread::spawn(move || {
+            trace_log(&format!(
+                "COORDINATOR: spawned, queue={} items, workers={}",
+                selected_models.len(),
+                N_WORKERS
+            ));
             let queue = Arc::new(std::sync::Mutex::new(selected_models));
             let completed_lock = Arc::new(std::sync::Mutex::new(0));
             let failed_lock = Arc::new(std::sync::Mutex::new(0));
             let mut workers = Vec::new();
-            const N_WORKERS: usize = 4;
+            const N_WORKERS: usize = 2;
 
             for worker_id in 0..N_WORKERS {
                 let queue = queue.clone();
@@ -476,24 +509,95 @@ impl App {
                 let completed_lock = completed_lock.clone();
                 let failed_lock = failed_lock.clone();
 
-                let handle = std::thread::spawn(move || loop {
+                let handle = std::thread::spawn(move || {
+                    trace_log(&format!("WORKER#{}: spawned", worker_id));
+                    loop {
                     let next_item = {
                         let mut lock = queue.lock().unwrap();
+                        let remaining = lock.len();
                         if lock.is_empty() {
                             None
                         } else {
+                            trace_log(&format!("WORKER#{}: queue remaining={}", worker_id, remaining));
                             Some(lock.remove(0))
                         }
                     };
 
                     let Some((_orig_idx, model)) = next_item else {
+                        trace_log(&format!("WORKER#{}: queue empty, exiting", worker_id));
                         break;
                     };
 
                     if cancel_token.load(Ordering::Acquire) {
+                        trace_log(&format!("WORKER#{}: cancel signal, exiting", worker_id));
                         break;
                     }
 
+                    trace_log(&format!(
+                        "WORKER#{}: probing URL for {}",
+                        worker_id, model.filename
+                    ));
+
+                    // Validate URL before download
+                    let probe_agent = ureq::Agent::new_with_config(
+                        ureq::config::Config::builder()
+                            .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                            .timeout_global(Some(std::time::Duration::from_secs(15)))
+                            .build(),
+                    );
+                    let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+                    let mut probe_req = probe_agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
+                    if let Some(ref t) = token {
+                        probe_req = probe_req.header("Authorization", &format!("Bearer {}", t));
+                    }
+                    match probe_req.call() {
+                        Ok(res) => {
+                            let status = res.status().as_u16();
+                            trace_log(&format!(
+                                "WORKER#{}: HEAD {} => {}",
+                                worker_id, model.filename, status
+                            ));
+                            if status != 200 && status != 206 && status != 403 {
+                                let _ = tx.send(DownloadEvent::Start {
+                                    worker_id,
+                                    filename: model.filename.clone(),
+                                });
+                                let _ = tx.send(DownloadEvent::ModelFinished {
+                                    worker_id,
+                                    filename: model.filename.clone(),
+                                    success: false,
+                                    error_msg: Some(format!("HTTP {} — URL unavailable", status)),
+                                });
+                                let mut f = failed_lock.lock().unwrap();
+                                *f += 1;
+                                continue;
+                            }
+                        }
+                        Err(e) => {
+                            trace_log(&format!(
+                                "WORKER#{}: HEAD {} FAILED: {}",
+                                worker_id, model.filename, e
+                            ));
+                            let _ = tx.send(DownloadEvent::Start {
+                                worker_id,
+                                filename: model.filename.clone(),
+                            });
+                            let _ = tx.send(DownloadEvent::ModelFinished {
+                                worker_id,
+                                filename: model.filename.clone(),
+                                success: false,
+                                error_msg: Some(format!("URL probe failed: {}", e)),
+                            });
+                            let mut f = failed_lock.lock().unwrap();
+                            *f += 1;
+                            continue;
+                        }
+                    }
+
+                    trace_log(&format!(
+                        "WORKER#{}: starting download for {}",
+                        worker_id, model.filename
+                    ));
                     let _ = tx.send(DownloadEvent::Start {
                         worker_id,
                         filename: model.filename.clone(),
@@ -503,25 +607,50 @@ impl App {
                     let mut last_error = None;
                     for attempt in 1..=3 {
                         if cancel_token.load(Ordering::Acquire) {
+                            trace_log(&format!(
+                                "WORKER#{}: cancel during attempt {}/3 for {}",
+                                worker_id, attempt, model.filename
+                            ));
                             break;
                         }
 
+                        trace_log(&format!(
+                            "WORKER#{}: attempt {}/3 for {}",
+                            worker_id, attempt, model.filename
+                        ));
                         match download_one_model(worker_id, &model, &config, &cancel_token, &tx) {
                             Ok(_) => {
+                                trace_log(&format!(
+                                    "WORKER#{}: SUCCESS {}",
+                                    worker_id, model.filename
+                                ));
                                 success = true;
                                 last_error = None;
                                 break;
                             }
                             Err(e) => {
+                                trace_log(&format!(
+                                    "WORKER#{}: FAIL attempt {}/3 {}: {}",
+                                    worker_id, attempt, model.filename, e
+                                ));
                                 last_error = Some(e);
                                 if cancel_token.load(Ordering::Acquire) {
                                     break;
                                 }
-                                std::thread::sleep(Duration::from_secs(attempt * 2));
+                                let sleep_secs = attempt * 2;
+                                trace_log(&format!(
+                                    "WORKER#{}: sleeping {}s before retry",
+                                    worker_id, sleep_secs
+                                ));
+                                std::thread::sleep(Duration::from_secs(sleep_secs));
                             }
                         }
                     }
 
+                    trace_log(&format!(
+                        "WORKER#{}: sending ModelFinished {} success={}",
+                        worker_id, model.filename, success
+                    ));
                     let _ = tx.send(DownloadEvent::ModelFinished {
                         worker_id,
                         filename: model.filename.clone(),
@@ -536,6 +665,7 @@ impl App {
                         let mut f = failed_lock.lock().unwrap();
                         *f += 1;
                     }
+                } // end loop
                 });
                 workers.push(handle);
             }
@@ -622,6 +752,7 @@ impl App {
                     }
                     if success {
                         self.completed_count += 1;
+                        self.mark_filtered_dirty();
                     } else {
                         self.failed_count += 1;
                     }
@@ -638,6 +769,7 @@ impl App {
                     };
                     self.selected_indices.clear();
                     should_clear_rx = true;
+                    self.mark_filtered_dirty();
                 }
                 DownloadEvent::RefreshUpdate { idx, size } => {
                     let mut filename = String::new();
@@ -646,7 +778,6 @@ impl App {
                         filename = m.filename.clone();
                         if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
                             cache.sizes.insert(m.url.clone(), size);
-                            cache.save();
                         }
                     }
                     if !filename.is_empty() {
@@ -662,11 +793,15 @@ impl App {
                     invalid,
                     unknown,
                 } => {
+                    if let Ok(cache) = crate::utils::SIZE_CACHE.write() {
+                        cache.save();
+                    }
                     self.add_log(&format!(
                         "Refresh complete: {} valid, {} invalid, {} unknown size.",
                         valid, invalid, unknown
                     ));
                     should_clear_rx = true;
+                    self.mark_filtered_dirty();
                 }
             }
         }
@@ -708,25 +843,36 @@ pub fn download_one_model(
     let sanitized_filename = sanitize_filename(&model.filename);
     let dest_dir = config.resolve_category_dir(&model.category);
     let dest_path = dest_dir.join(&sanitized_filename);
+    trace_log(&format!(
+        "DL#{}: begin {} => {}",
+        worker_id, model.filename, dest_path.display()
+    ));
 
     if model.category == "diffusers" {
+        trace_log(&format!("DL#{}: diffusers category, delegating", worker_id));
         return download_diffusers_bg(&dest_path);
     }
 
     let temp_dir = PathBuf::from(&config.models_dir).join(".download_tmp");
     fs::create_dir_all(&temp_dir).map_err(|e| e.to_string())?;
     let temp_path = temp_dir.join(format!("{}.tmp", sanitized_filename));
+    trace_log(&format!(
+        "DL#{}: temp_path={}",
+        worker_id,
+        temp_path.display()
+    ));
 
     let agent = ureq::Agent::new_with_config(
         ureq::config::Config::builder()
             .timeout_connect(Some(std::time::Duration::from_secs(15)))
-            .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
+            .timeout_recv_body(Some(std::time::Duration::from_secs(120)))
             .timeout_global(Some(std::time::Duration::from_secs(3600)))
             .build(),
     );
     let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
 
     // 1. Try HEAD request to get total_size and check Accept-Ranges
+    trace_log(&format!("DL#{}: HEAD {}", worker_id, model.url));
     let mut head_req = agent.head(&model.url).header("User-Agent", "Mozilla/5.0");
     if let Some(ref t) = token {
         head_req = head_req.header("Authorization", &format!("Bearer {}", t));
@@ -735,30 +881,41 @@ pub fn download_one_model(
     let mut total_size = 0u64;
     let mut supports_ranges = false;
 
-    if let Ok(res) = head_req.call() {
-        let status = res.status().as_u16();
-        if status == 200 || status == 206 {
-            total_size = res
-                .headers()
-                .get("Content-Length")
-                .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.parse::<u64>().ok())
-                .unwrap_or(0);
+    match head_req.call() {
+        Ok(res) => {
+            let status = res.status().as_u16();
+            trace_log(&format!("DL#{}: HEAD status={}", worker_id, status));
+            if status == 200 || status == 206 {
+                total_size = res
+                    .headers()
+                    .get("Content-Length")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
 
-            if let Some(accept_ranges) = res
-                .headers()
-                .get("Accept-Ranges")
-                .and_then(|v| v.to_str().ok())
-            {
-                if accept_ranges.to_lowercase().contains("bytes") {
-                    supports_ranges = true;
+                if let Some(accept_ranges) = res
+                    .headers()
+                    .get("Accept-Ranges")
+                    .and_then(|v| v.to_str().ok())
+                {
+                    if accept_ranges.to_lowercase().contains("bytes") {
+                        supports_ranges = true;
+                    }
                 }
             }
+            trace_log(&format!(
+                "DL#{}: HEAD total_size={} supports_ranges={}",
+                worker_id, total_size, supports_ranges
+            ));
+        }
+        Err(e) => {
+            trace_log(&format!("DL#{}: HEAD FAILED: {}", worker_id, e));
         }
     }
 
     // 2. If HEAD failed or accept-ranges not found, try a small GET bytes=0-0
     if !supports_ranges || total_size == 0 {
+        trace_log(&format!("DL#{}: GET Range probe bytes=0-0", worker_id));
         let mut test_req = agent
             .get(&model.url)
             .header("User-Agent", "Mozilla/5.0")
@@ -766,25 +923,31 @@ pub fn download_one_model(
         if let Some(ref t) = token {
             test_req = test_req.header("Authorization", &format!("Bearer {}", t));
         }
-        if let Ok(res) = test_req.call() {
-            let status = res.status().as_u16();
-            if status == 206 {
-                supports_ranges = true;
-                if total_size == 0 {
-                    if let Some(content_range) = res
-                        .headers()
-                        .get("Content-Range")
-                        .and_then(|v| v.to_str().ok())
-                    {
-                        if let Some(total) = content_range
-                            .rsplit('/')
-                            .next()
-                            .and_then(|s| s.parse::<u64>().ok())
+        match test_req.call() {
+            Ok(res) => {
+                let status = res.status().as_u16();
+                trace_log(&format!("DL#{}: Range probe status={}", worker_id, status));
+                if status == 206 {
+                    supports_ranges = true;
+                    if total_size == 0 {
+                        if let Some(content_range) = res
+                            .headers()
+                            .get("Content-Range")
+                            .and_then(|v| v.to_str().ok())
                         {
-                            total_size = total;
+                            if let Some(total) = content_range
+                                .rsplit('/')
+                                .next()
+                                .and_then(|s| s.parse::<u64>().ok())
+                            {
+                                total_size = total;
+                            }
                         }
                     }
                 }
+            }
+            Err(e) => {
+                trace_log(&format!("DL#{}: Range probe FAILED: {}", worker_id, e));
             }
         }
     }
@@ -792,19 +955,32 @@ pub fn download_one_model(
     // If still 0, fallback to Model's size if populated
     if total_size == 0 {
         total_size = model.size_bytes;
+        trace_log(&format!(
+            "DL#{}: using model.size_bytes={} as fallback",
+            worker_id, total_size
+        ));
     }
+
+    trace_log(&format!(
+        "DL#{}: resolved total_size={} supports_ranges={}",
+        worker_id, total_size, supports_ranges
+    ));
 
     if supports_ranges && total_size > 0 {
         // Dynamic chunk count based on file size
         let n_chunks: usize = if total_size < 50 * 1024 * 1024 {
-            1 // <50MB: single stream
+            1
         } else if total_size < 200 * 1024 * 1024 {
-            2 // <200MB: 2 chunks
+            2
         } else if total_size < 1024 * 1024 * 1024 {
-            4 // <1GB: 4 chunks
+            4
         } else {
-            8 // >=1GB: 8 chunks
+            8
         };
+        trace_log(&format!(
+            "DL#{}: parallel mode, n_chunks={} total_size={}",
+            worker_id, n_chunks, total_size
+        ));
         let progress_path = temp_path.with_extension("progress");
 
         let chunk_size = total_size / n_chunks as u64;
@@ -828,7 +1004,37 @@ pub fn download_one_model(
                         && (p.n_chunks == n_chunks || p.n_chunks == 0)
                     {
                         chunk_offsets = p.chunk_offsets;
+                        trace_log(&format!(
+                            "DL#{}: resumed from .progress file, offsets={:?}",
+                            worker_id, chunk_offsets
+                        ));
                     }
+                }
+            }
+        }
+
+        // Fallback: no .progress file but .tmp exists — resume from file size
+        if chunk_offsets.iter().all(|&o| o == 0) && temp_path.exists() {
+            if let Ok(actual_size) = fs::metadata(&temp_path).map(|m| m.len()) {
+                if actual_size > 0 && actual_size <= total_size {
+                    let chunk_size = total_size / n_chunks as u64;
+                    for i in 0..n_chunks {
+                        let start = i as u64 * chunk_size;
+                        let end = if i == n_chunks - 1 {
+                            total_size - 1
+                        } else {
+                            (i as u64 + 1) * chunk_size - 1
+                        };
+                        if actual_size > start {
+                            chunk_offsets[i] = (actual_size.min(end + 1)).saturating_sub(start);
+                        }
+                    }
+                    trace_log(&format!(
+                        "DL#{}: resumed from .tmp size={}, offsets={:?}",
+                        worker_id,
+                        actual_size,
+                        chunk_offsets
+                    ));
                 }
             }
         }
@@ -864,7 +1070,7 @@ pub fn download_one_model(
         let shared_agent = Arc::new(ureq::Agent::new_with_config(
             ureq::config::Config::builder()
                 .timeout_connect(Some(std::time::Duration::from_secs(15)))
-                .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
+                .timeout_recv_body(Some(std::time::Duration::from_secs(120)))
                 .timeout_global(Some(std::time::Duration::from_secs(3600)))
                 .build(),
         ));
@@ -906,7 +1112,7 @@ pub fn download_one_model(
                     }
 
                     let mut reader = response.into_body().into_reader();
-                    let mut buf = vec![0u8; 512 * 1024];
+                    let mut buf = vec![0u8; 256 * 1024];
                     let mut bytes_downloaded_this_session = 0u64;
 
                     loop {
@@ -1126,7 +1332,7 @@ pub fn download_one_model(
         let file = file.map_err(|e| e.to_string())?;
         let mut writer = std::io::BufWriter::new(file);
         let mut reader = response.into_body().into_reader();
-        let mut buf = vec![0u8; 512 * 1024];
+        let mut buf = vec![0u8; 256 * 1024];
         let mut downloaded: u64 = if is_partial { current_size } else { 0 };
         let start_time = Instant::now();
         let mut last_report = Instant::now();
@@ -1195,7 +1401,7 @@ pub fn download_one_model(
         if total_size > 0 {
             let actual_size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
             let diff = actual_size.abs_diff(total_size);
-            let allowed_diff = (total_size / 100).min(1024 * 1024); // 1% or 1MB
+            let allowed_diff = (total_size / 100).max(1024 * 1024);
             if diff > allowed_diff {
                 return Err(format!(
                     "Size mismatch: expected {}, got {}",

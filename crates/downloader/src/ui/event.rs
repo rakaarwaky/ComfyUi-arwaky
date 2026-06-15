@@ -22,10 +22,12 @@ pub fn handle_event(
                                 KeyCode::Backspace => {
                                     app.search_query.pop();
                                     app.list_state.select(Some(0));
+                                    app.mark_filtered_dirty();
                                 }
                                 KeyCode::Char(c) => {
                                     app.search_query.push(c);
                                     app.list_state.select(Some(0));
+                                    app.mark_filtered_dirty();
                                 }
                                 _ => {}
                             }
@@ -72,6 +74,7 @@ pub fn handle_event(
                                     app.active_tab = (app.active_tab + 1) % total_pages;
                                     app.ensure_active_tab_visible(total_pages);
                                     app.list_state.select(Some(0));
+                                    app.mark_filtered_dirty();
                                 }
                                 KeyCode::BackTab | KeyCode::Left => {
                                     let total_pages = 3 + app.categories.len();
@@ -82,6 +85,7 @@ pub fn handle_event(
                                     };
                                     app.ensure_active_tab_visible(total_pages);
                                     app.list_state.select(Some(0));
+                                    app.mark_filtered_dirty();
                                 }
                                 KeyCode::Up => {
                                     let filtered_len = app.filtered_models().len();
@@ -131,6 +135,7 @@ pub fn handle_event(
                                         app.active_tab = digit;
                                         app.ensure_active_tab_visible(total_pages);
                                         app.list_state.select(Some(0));
+                                        app.mark_filtered_dirty();
                                     }
                                 }
                                 KeyCode::Char('<') | KeyCode::Char(',') => {

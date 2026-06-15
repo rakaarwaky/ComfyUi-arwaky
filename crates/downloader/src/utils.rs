@@ -79,7 +79,7 @@ pub fn file_exists_valid(path: &Path, expected_size: u64, url: Option<&str>) -> 
                     return actual_size >= 1000;
                 }
                 let diff = actual_size.abs_diff(expected);
-                let allowed_diff = (expected / 100).min(1024 * 1024); // 1% or 1MB
+                let allowed_diff = (expected / 100).max(1024 * 1024);
                 diff <= allowed_diff
             };
 

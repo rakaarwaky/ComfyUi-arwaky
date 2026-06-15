@@ -5,8 +5,7 @@ use crossterm::{
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::time::{Duration, Instant};
 
 pub mod app;
@@ -33,63 +32,48 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             let agent = ureq::Agent::new_with_config(
                 ureq::config::Config::builder()
                     .timeout_connect(Some(std::time::Duration::from_secs(10)))
-                    .timeout_global(Some(std::time::Duration::from_secs(10)))
+                    .timeout_recv_body(Some(std::time::Duration::from_secs(10)))
+                    .timeout_global(Some(std::time::Duration::from_secs(15)))
                     .build(),
             );
 
-            for m in models {
-                let dest_dir = config.resolve_category_dir(&m.category);
-                let dest_path = dest_dir.join(&m.filename);
-                if dest_path.is_file() {
-                    let needs_verification =
-                        !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
+            let needs_check: Vec<_> = models
+                .iter()
+                .filter(|m| {
+                    let dest_dir = config.resolve_category_dir(&m.category);
+                    let dest_path = dest_dir.join(&m.filename);
+                    dest_path.is_file()
+                        && !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
+                })
+                .collect();
 
-                    if needs_verification {
-                        let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
-                        let mut req = agent.head(&m.url).header("User-Agent", "Mozilla/5.0");
-                        if let Some(t) = token {
-                            req = req.header("Authorization", &format!("Bearer {}", t));
-                        }
+            for m in needs_check {
+                let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+                let mut req = agent.head(&m.url).header("User-Agent", "Mozilla/5.0");
+                if let Some(t) = token {
+                    req = req.header("Authorization", &format!("Bearer {}", t));
+                }
 
-                        if let Ok(res) = req.call() {
-                            let status = res.status().as_u16();
-                            if status == 200 || status == 206 {
-                                let response_len: u64 = res
-                                    .headers()
-                                    .get("Content-Length")
-                                    .and_then(|v| v.to_str().ok())
-                                    .and_then(|v| v.parse().ok())
-                                    .unwrap_or(0);
+                if let Ok(res) = req.call() {
+                    let status = res.status().as_u16();
+                    if status == 200 || status == 206 {
+                        let response_len: u64 = res
+                            .headers()
+                            .get("Content-Length")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok())
+                            .unwrap_or(0);
 
-                                if response_len > 0 {
-                                    if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
-                                        cache.sizes.insert(m.url.clone(), response_len);
-                                        cache.save();
-                                    }
-                                }
-                            } else {
-                                if let Some(path) = crate::utils::SizeCache::cache_path() {
-                                    if let Some(parent) = path.parent() {
-                                        let log_file_path = parent.join("downloader.log");
-                                        if let Ok(mut file) = fs::OpenOptions::new()
-                                            .create(true)
-                                            .append(true)
-                                            .open(log_file_path)
-                                        {
-                                            let timestamp = crate::ui::app::get_time_str();
-                                            let _ = writeln!(
-                                                file,
-                                                "[{}] Background check: Invalid URL for {} (Status: {})",
-                                                timestamp, m.filename, status
-                                            );
-                                        }
-                                    }
-                                }
+                        if response_len > 0 {
+                            if let Ok(mut cache) = crate::utils::SIZE_CACHE.write() {
+                                cache.sizes.insert(m.url.clone(), response_len);
                             }
                         }
-                        std::thread::sleep(std::time::Duration::from_millis(500));
                     }
                 }
+            }
+            if let Ok(cache) = crate::utils::SIZE_CACHE.write() {
+                cache.save();
             }
         });
     }
