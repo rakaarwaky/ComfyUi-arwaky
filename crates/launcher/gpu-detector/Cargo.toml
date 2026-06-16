@@ -1,0 +1,7 @@
+[package]
+name = "launcher-gpu-detector"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+launcher-shared = { path = "../shared" }

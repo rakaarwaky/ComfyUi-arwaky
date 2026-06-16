@@ -1,0 +1,8 @@
+[package]
+name = "launcher-log-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+launcher-shared = { path = "../shared" }
+tauri = { version = "2.11.2", features = [] }

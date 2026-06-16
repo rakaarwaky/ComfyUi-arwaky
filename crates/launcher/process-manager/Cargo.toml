@@ -1,0 +1,8 @@
+[package]
+name = "launcher-process-manager"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+launcher-shared = { path = "../shared" }
+libc = "0.2"

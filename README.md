@@ -67,7 +67,8 @@ Let's be realistic—this wrapper isn't for everyone. Here is how to decide if y
 * **Bounded & Batched Log Routing** – Collects stdout/stderr via multi-threaded readers, pipes them through a bounded MPSC channel, stores them in a 2,000-entry memory log, and batches them (50 messages / 100ms) to the UI.
 * **Liveness Port Polling** – Continually polls the ComfyUI TCP port (`127.0.0.1:8188`) and redirects the Tauri webview immediately once it responds.
 * **Fedora Packaging** – Generates portable AppImages and Fedora RPM packages.
-* **Rootless Local Installation** – Includes helper scripts to extract and relocate the application to local user space directories (`~/.local`) without requiring administrative permissions.
+* **Rootless Local Installation** – Includes helper scripts to extract and relocate the application to user space directories (`~/.cargo/bin`) without requiring administrative permissions.
+* **Standalone Model Downloader** – A dedicated TUI (Ratatui) binary `comfyui-downloader-tui` and CLI binary `comfyui-downloader-cli` for browsing, selecting, and downloading ComfyUI models directly from HuggingFace, organized in an AES (Agentic Engineering System) multi-crate architecture.
 
 ---
 
@@ -130,6 +131,19 @@ bash scripts/install_local.sh
 4. **Compile the Production Bundles**:
    ```bash
    bash scripts/build.sh
+   ```
+
+5. **Build the Model Downloader (CLI + TUI)**:
+   ```bash
+   bash scripts/build-downloader.sh
+   # Binaries: dist/comfyui-downloader-cli, dist/comfyui-downloader-tui
+   ```
+
+6. **Install all binaries locally**:
+   ```bash
+   bash scripts/install_local.sh
+   # Installs to ~/.cargo/bin/comfyui-downloader-cli
+   # Installs to ~/.cargo/bin/comfyui-downloader-tui
    ```
 
 ---

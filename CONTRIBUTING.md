@@ -10,7 +10,8 @@ Thank you for your interest in contributing to ComfyUI Desktop! This document pr
    - [Getting Started](#getting-started)
    - [Development Commands](#development-commands)
 2. [Code Standards](#code-standards)
-   - [Rust Backend](#rust-backend)
+   - [Launcher Rust Backend](#launcher-rust-backend)
+   - [Downloader Rust (AES Architecture)](#downloader-rust-aes-architecture)
    - [Splash Screen Frontend](#splash-screen-frontend)
    - [Bash Scripts](#bash-scripts)
 3. [Commit Message Conventions](#commit-message-conventions)
@@ -75,21 +76,32 @@ To compile production AppImages and RPM files to the `dist/` folder:
 bash scripts/build.sh
 ```
 
+To build the model downloader only (CLI + TUI):
+```bash
+bash scripts/build-downloader.sh
+# Output: dist/comfyui-downloader-cli, dist/comfyui-downloader-tui
+```
+
+To run the downloader TUI directly (build + launch):
+```bash
+bash scripts/download_models.sh
+```
+
 ---
 
 ## Code Standards
 
-### Rust Backend
+### Launcher Rust Backend
 
-All Rust code resides inside the `crates/launcher/` folder. Please adhere to the following formatting and compiler standards:
+All launcher code resides inside `crates/launcher/`. Please adhere to the following formatting and compiler standards:
 
-* **Formatting**: Ensure your code is properly formatted before staging changes:
+* **Formatting**:
   ```bash
-  cargo fmt --manifest-path crates/launcher/Cargo.toml --check
+  cargo fmt --manifest-path crates/Cargo.toml -p launcher --check
   ```
-* **Lints**: All warnings must be resolved. Do not commit code that produces compiler warnings. Run the standard linter:
+* **Lints**: All warnings must be resolved.
   ```bash
-  cargo clippy --manifest-path crates/launcher/Cargo.toml -- -D warnings
+  cargo clippy --manifest-path crates/Cargo.toml -p launcher -- -D warnings
   ```
 * **Concurrence & Safety**:
   - Prefer using bounded, non-blocking operations for channel communications. Use `try_send` instead of blocking `send` inside background thread readers to prevent thread locks.
@@ -101,6 +113,30 @@ All Rust code resides inside the `crates/launcher/` folder. Please adhere to the
     };
     ```
   - Clean up child process trees on termination. Ensure you register new sub-processes in a process group (`process_group(0)`) so the shutdown sequence terminates all children.
+
+### Downloader Rust (AES Architecture)
+
+The downloader lives under `crates/downloader/` as a multi-crate AES workspace with its own tests. See `AGENTS.md` for the full crate layout.
+
+* **Formatting**:
+  ```bash
+  cargo fmt --manifest-path crates/Cargo.toml --check
+  ```
+* **Lints** (workspace-wide, all packages):
+  ```bash
+  cargo clippy --manifest-path crates/Cargo.toml -- -D warnings
+  ```
+* **Tests**:
+  ```bash
+  cargo test --manifest-path crates/Cargo.toml
+  ```
+* **AES layer rules** (enforced by compiler, not convention):
+  - `contract_*` = traits only — no implementation logic
+  - `capabilities_*` = implements protocol traits — no IO
+  - `infrastructure_*` = implements port traits — IO/network only
+  - `agent_*_orchestrator` = orchestrator — imports ONLY contract traits
+  - `surface_*` = frontend — calls orchestrator via aggregate trait only
+  - `root_downloader_container.rs` = DI wiring — only place that wires concrete types to trait objects
 
 ### Splash Screen Frontend
 
@@ -134,14 +170,14 @@ Format:
 ```
 
 * **Types**:
-  - `feat`: A new feature implementation (e.g. `feat(gpu): add automated HSA override for RDNA3`)
-  - `fix`: A bug fix (e.g. `fix(shutdown): resolve zombie python processes on termination`)
+  - `feat`: A new feature implementation
+  - `fix`: A bug fix
   - `docs`: Documentation changes only
   - `style`: Changes that do not affect the meaning of the code (formatting, white-space, etc.)
   - `refactor`: A code change that neither fixes a bug nor adds a feature
   - `ci`: CI configuration updates or script modifications
   - `chore`: Version updates, dependency changes, build steps
-* **Scope**: Optional, indicating the area of code changed (e.g., `ipc`, `installer`, `scripts`).
+* **Scope**: Optional, indicating the area of code changed (e.g., `downloader`, `launcher`, `scripts`).
 
 ---
 
@@ -186,7 +222,7 @@ We manage project versions systematically using custom scripts. If you are prepa
    ```bash
    # Bump the app version to 0.2.0
    bash scripts/bump-version.sh 0.2.0
-   
+
    # Bump the app version and specify a backend target release version
    bash scripts/bump-version.sh 0.2.0 --backend 1.0.0
    ```
@@ -195,6 +231,8 @@ We manage project versions systematically using custom scripts. If you are prepa
    - Version mapping in `crates/launcher/tauri.conf.json`
    - Downloader version constraints in `crates/launcher/src/downloader.rs`
 3. Optional: Pass `--tag` to automatically create a git tag and commit the updates.
+
+The downloader workspace version (`crates/Cargo.toml` → `workspace.package.version`) is managed separately.
 
 ---
 

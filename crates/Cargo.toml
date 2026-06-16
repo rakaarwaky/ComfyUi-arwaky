@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "launcher",
+    "launcher/shared",
+    "launcher/config",
+    "launcher/backend-engine",
+    "launcher/gpu-detector",
+    "launcher/log-engine",
+    "launcher/process-manager",
+    "launcher/launcher-engine",
+    "downloader",
+    "downloader/shared",
+    "downloader/config",
+    "downloader/downloader-engine",
+    "downloader/file-utils",
+    "downloader/tui",
+    "downloader/cli",
+]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"

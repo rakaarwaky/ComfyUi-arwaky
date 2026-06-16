@@ -8,6 +8,7 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 
+echo ""
 echo "========================================"
 echo " ComfyUI Desktop — Full Build"
 echo "========================================"
@@ -17,7 +18,7 @@ echo ""
 rm -rf "$DIST_DIR"
 
 echo ">>> Building Launcher..."
-bash "$ROOT_DIR/scripts/build-launcher.sh"
+RUST_MIN_STACK=16777216 bash "$ROOT_DIR/scripts/build-launcher.sh"
 
 echo ""
 echo ">>> Building Downloader..."
@@ -27,7 +28,7 @@ bash "$ROOT_DIR/scripts/build-downloader.sh"
 echo ""
 echo "Generating SHA256 checksums..."
 cd "$DIST_DIR"
-sha256sum comfyui-desktop comfyui-downloader > SHA256SUMS.txt
+sha256sum comfyui-desktop comfyui-downloader-cli comfyui-downloader-tui > SHA256SUMS.txt
 echo "  ✅ SHA256SUMS.txt generated"
 cd "$ROOT_DIR"
 
