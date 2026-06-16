@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.5.0"
+version = "0.5.1"
 description = "ComfyUI Desktop — Tauri v2 wrapper for ComfyUI with AMD ROCm GPU auto-configuration"
 authors = ["raka <raka@arwaky.id>"]
 license = "MIT"
@@ -8,25 +8,29 @@ repository = "https://github.com/rakaarwaky/ComfyUi-arwaky"
 edition = "2021"
 rust-version = "1.77.2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 name = "app_lib"
+path = "lib.rs"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "app"
+path = "root_main_desktop_entry.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
+launcher-shared = { path = "shared" }
+launcher-config = { path = "config" }
+launcher-backend-engine = { path = "backend-engine" }
+launcher-gpu-detector = { path = "gpu-detector" }
+launcher-log-engine = { path = "log-engine" }
+launcher-process-manager = { path = "process-manager" }
+launcher-engine = { path = "launcher-engine" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
 libc = "0.2"
-ureq = { version = "3", features = ["json"] }
-flate2 = "1"
-tar = "0.4"
-sha2 = "0.11"
-hex = "0.4"
-serde_yaml = "0.9"

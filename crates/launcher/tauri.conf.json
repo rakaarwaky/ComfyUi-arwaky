@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "comfyui-desktop",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "identifier": "com.arwaky.comfyui",
   "build": {
-    "frontendDist": "./assets/ui"
+    "frontendDist": "../../assets/ui"
   },
   "app": {
     "withGlobalTauri": false,
@@ -44,11 +44,11 @@
       "rpm"
     ],
     "icon": [
-      "assets/icons/32x32.png",
-      "assets/icons/128x128.png",
-      "assets/icons/128x128@2x.png",
-      "assets/icons/icon.icns",
-      "assets/icons/icon.ico"
+      "../../assets/icons/32x32.png",
+      "../../assets/icons/128x128.png",
+      "../../assets/icons/128x128@2x.png",
+      "../../assets/icons/icon.icns",
+      "../../assets/icons/icon.ico"
     ],
     "resources": [
       "config.default.yaml"
