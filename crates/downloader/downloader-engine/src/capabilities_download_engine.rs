@@ -72,18 +72,21 @@ impl DownloadProtocol for DownloadEngine {
 
         let mut reader = resp.into_body().into_reader();
         let mut file = if is_resume {
-            fs::OpenOptions::new().append(true).open(&tmp_path)
+            fs::OpenOptions::new()
+                .append(true)
+                .open(&tmp_path)
                 .map_err(|e| format!("Failed to open partial file: {e}"))?
         } else {
-            fs::File::create(&tmp_path)
-                .map_err(|e| format!("Failed to create file: {e}"))?
+            fs::File::create(&tmp_path).map_err(|e| format!("Failed to create file: {e}"))?
         };
 
         let mut buf = vec![0u8; 256 * 1024];
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => break,
-                Ok(n) => file.write_all(&buf[..n]).map_err(|e| format!("Write error: {e}"))?,
+                Ok(n) => file
+                    .write_all(&buf[..n])
+                    .map_err(|e| format!("Write error: {e}"))?,
                 Err(e) => return Err(format!("Read error: {e}")),
             }
         }
@@ -109,7 +112,9 @@ impl DownloadProtocol for DownloadEngine {
 pub fn download_diffusers_bg(diffusers_dir: &Path) -> Result<(), String> {
     if diffusers_dir.exists() {
         if let Ok(entries) = fs::read_dir(diffusers_dir) {
-            if entries.count() > 10 { return Ok(()); }
+            if entries.count() > 10 {
+                return Ok(());
+            }
         }
     }
     let mut cmd = std::process::Command::new("huggingface-cli");
@@ -117,9 +122,15 @@ pub fn download_diffusers_bg(diffusers_dir: &Path) -> Result<(), String> {
         .arg("stabilityai/stable-diffusion-xl-base-1.0")
         .arg("--local-dir")
         .arg(diffusers_dir);
-    if let Ok(token) = std::env::var("HF_TOKEN") { cmd.arg("--token").arg(token); }
+    if let Ok(token) = std::env::var("HF_TOKEN") {
+        cmd.arg("--token").arg(token);
+    }
     let status = cmd.status().map_err(|e| e.to_string())?;
-    if status.success() { Ok(()) } else { Err("huggingface-cli build failed".to_string()) }
+    if status.success() {
+        Ok(())
+    } else {
+        Err("huggingface-cli build failed".to_string())
+    }
 }
 
 /// Full download logic: direct download with progress. No HEAD probe.
@@ -130,8 +141,8 @@ pub fn download_one_model(
     cancel_token: &Arc<AtomicBool>,
     tx: &Sender<DownloadEvent>,
 ) -> Result<(), String> {
-    use downloader_file_utils::infrastructure_fs_adapter as fs_adapter;
     use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
+    use downloader_file_utils::infrastructure_fs_adapter as fs_adapter;
 
     let sanitized = fs_adapter::sanitize_filename(&model.filename);
     let dest_dir = config.resolve_category_dir(&model.category);
@@ -228,7 +239,8 @@ pub fn download_one_model(
         match reader.read(&mut buf) {
             Ok(0) => break,
             Ok(n) => {
-                file.write_all(&buf[..n]).map_err(|e| format!("Write error: {e}"))?;
+                file.write_all(&buf[..n])
+                    .map_err(|e| format!("Write error: {e}"))?;
                 downloaded += n as u64;
                 if last_report.elapsed() >= std::time::Duration::from_millis(200) {
                     let elapsed = start.elapsed().as_secs_f64();
@@ -240,7 +252,8 @@ pub fn download_one_model(
                         0.0
                     };
                     let eta = if speed > 0.0 && total > 0 {
-                        ((total.saturating_sub(downloaded)) as f64 / (1024.0 * 1024.0) / speed) as u64
+                        ((total.saturating_sub(downloaded)) as f64 / (1024.0 * 1024.0) / speed)
+                            as u64
                     } else {
                         0
                     };
@@ -281,8 +294,65 @@ pub fn download_one_model(
 }
 
 pub fn model_sort_size(model: &Model, cache_sizes: &HashMap<String, u64>) -> u64 {
-    let s = if model.size_bytes > 0 { model.size_bytes } else { cache_sizes.get(&model.url).copied().unwrap_or(0) };
-    if s == 0 { u64::MAX } else { s }
+    let s = if model.size_bytes > 0 {
+        model.size_bytes
+    } else {
+        cache_sizes.get(&model.url).copied().unwrap_or(0)
+    };
+    if s == 0 {
+        u64::MAX
+    } else {
+        s
+    }
+}
+
+/// HTTP HEAD refresh — pure capability (uses ureq directly, could move to infra later)
+pub fn refresh_model_sizes(models: &[(usize, Model)], config: &Config) -> (usize, usize, usize) {
+    use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
+    let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
+    let agent = ureq::Agent::new_with_config(
+        ureq::config::Config::builder()
+            .timeout_connect(Some(Duration::from_secs(10)))
+            .timeout_recv_body(Some(Duration::from_secs(120)))
+            .timeout_global(Some(Duration::from_secs(15)))
+            .build(),
+    );
+    let mut valid = 0usize;
+    let mut invalid = 0usize;
+    let mut unknown = 0usize;
+    for (_idx, m) in models {
+        let mut req = agent.head(&m.url).header("User-Agent", "Mozilla/5.0");
+        if let Some(ref t) = token {
+            req = req.header("Authorization", &format!("Bearer {t}"));
+        }
+        match req.call() {
+            Ok(res) => {
+                let status = res.status().as_u16();
+                if status == 200 || status == 206 {
+                    let len: u64 = res
+                        .headers()
+                        .get("Content-Length")
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(0);
+                    if len > 0 {
+                        if let Ok(mut cache) = SIZE_CACHE.write() {
+                            cache.sizes.insert(m.url.clone(), len);
+                        }
+                        valid += 1;
+                    } else {
+                        unknown += 1;
+                    }
+                } else {
+                    invalid += 1;
+                }
+            }
+            Err(_) => {
+                invalid += 1;
+            }
+        }
+    }
+    (valid, invalid, unknown)
 }
 
 #[cfg(test)]
@@ -331,34 +401,4 @@ mod tests {
         cache.insert("https://example.com/model".to_string(), 2048);
         assert_eq!(model_sort_size(&m, &cache), 4096);
     }
-}
-
-/// HTTP HEAD refresh — pure capability (uses ureq directly, could move to infra later)
-pub fn refresh_model_sizes(models: &[(usize, Model)], config: &Config) -> (usize, usize, usize) {
-    use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
-    let token = std::env::var("HF_TOKEN").ok().or(config.hf_token.clone());
-    let agent = ureq::Agent::new_with_config(
-        ureq::config::Config::builder()
-            .timeout_connect(Some(Duration::from_secs(10)))
-            .timeout_recv_body(Some(Duration::from_secs(120)))
-            .timeout_global(Some(Duration::from_secs(15))).build(),
-    );
-    let mut valid = 0usize; let mut invalid = 0usize; let mut unknown = 0usize;
-    for (_idx, m) in models {
-        let mut req = agent.head(&m.url).header("User-Agent", "Mozilla/5.0");
-        if let Some(ref t) = token { req = req.header("Authorization", &format!("Bearer {t}")); }
-        match req.call() {
-            Ok(res) => {
-                let status = res.status().as_u16();
-                if status == 200 || status == 206 {
-                    let len: u64 = res.headers().get("Content-Length")
-                        .and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()).unwrap_or(0);
-                    if len > 0 { if let Ok(mut cache) = SIZE_CACHE.write() { cache.sizes.insert(m.url.clone(), len); } valid += 1; }
-                    else { unknown += 1; }
-                } else { invalid += 1; }
-            }
-            Err(_) => { invalid += 1; }
-        }
-    }
-    (valid, invalid, unknown)
 }

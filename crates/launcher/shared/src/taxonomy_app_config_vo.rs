@@ -1,6 +1,6 @@
 // PURPOSE: AppConfig value object for launcher.
 
-#[derive(serde::Deserialize, Default, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Default, Clone, Debug)]
 pub struct AppConfig {
     pub python_path: Option<String>,
     pub comfyui_dir: Option<String>,

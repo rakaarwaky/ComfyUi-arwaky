@@ -1,6 +1,7 @@
 // PURPOSE: Log message value object — variants for stdout/stderr/launcher log sources.
 
 /// Log message variants from stdout/stderr/launcher sources.
+#[derive(Debug)]
 pub enum LogMessage {
     Stdout(String),
     Stderr(String),
@@ -22,11 +23,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn display_stdout() { assert_eq!(LogMessage::Stdout("hi".into()).to_string(), "[stdout] hi"); }
+    fn display_stdout() {
+        assert_eq!(LogMessage::Stdout("hi".into()).to_string(), "[stdout] hi");
+    }
     #[test]
-    fn display_stderr() { assert_eq!(LogMessage::Stderr("err".into()).to_string(), "[stderr] err"); }
+    fn display_stderr() {
+        assert_eq!(LogMessage::Stderr("err".into()).to_string(), "[stderr] err");
+    }
     #[test]
-    fn display_launcher() { assert_eq!(LogMessage::Launcher("start".into()).to_string(), "[Launcher] start"); }
+    fn display_launcher() {
+        assert_eq!(
+            LogMessage::Launcher("start".into()).to_string(),
+            "[Launcher] start"
+        );
+    }
     #[test]
-    fn debug_stdout() { assert!(format!("{:?}", LogMessage::Stdout("x".into())).contains("Stdout")); }
+    fn debug_stdout() {
+        assert!(format!("{:?}", LogMessage::Stdout("x".into())).contains("Stdout"));
+    }
 }

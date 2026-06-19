@@ -1,9 +1,9 @@
 // PURPOSE: Domain error types for backend installation.
 
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::Serialize;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum BackendInstallError {
     DiskSpaceLow { available: u64, needed: u64 },
     DownloadFailed { http_status: u16 },
@@ -20,7 +20,10 @@ impl fmt::Display for BackendInstallError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DiskSpaceLow { available, needed } => {
-                write!(f, "Insufficient disk space: {available} GB available, need at least {needed} GB")
+                write!(
+                    f,
+                    "Insufficient disk space: {available} GB available, need at least {needed} GB"
+                )
             }
             Self::DownloadFailed { http_status } => {
                 write!(f, "Download failed: server returned HTTP {http_status}")
@@ -46,8 +49,14 @@ mod tests {
 
     #[test]
     fn display_disk_space_low() {
-        let err = BackendInstallError::DiskSpaceLow { available: 5, needed: 20 };
-        assert_eq!(err.to_string(), "Insufficient disk space: 5 GB available, need at least 20 GB");
+        let err = BackendInstallError::DiskSpaceLow {
+            available: 5,
+            needed: 20,
+        };
+        assert_eq!(
+            err.to_string(),
+            "Insufficient disk space: 5 GB available, need at least 20 GB"
+        );
     }
 
     #[test]

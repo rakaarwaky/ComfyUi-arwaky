@@ -107,7 +107,7 @@ jobs:
         run: |
           for file in README.md LICENSE CONTRIBUTING.md \
             crates/launcher/Cargo.toml crates/launcher/tauri.conf.json \
-            crates/launcher/src/main.rs crates/launcher/src/lib.rs crates/launcher/src/downloader.rs; do
+            crates/launcher/lib.rs crates/launcher/root_main_desktop_entry.rs; do
             [ -f "$file" ] && echo "OK $file" || { echo "MISSING $file"; exit 1; }
           done
 

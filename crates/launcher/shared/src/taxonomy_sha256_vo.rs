@@ -20,11 +20,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn from_string() { let h = Sha256Hash::from("abc".into()); assert_eq!(h.0, "abc"); }
+    fn from_string() {
+        let h = Sha256Hash::from(String::from("abc"));
+        assert_eq!(h.0, "abc");
+    }
     #[test]
-    fn as_str_returns_inner() { assert_eq!(Sha256Hash("a".into()).as_str(), "a"); }
+    fn as_str_returns_inner() {
+        assert_eq!(Sha256Hash("a".into()).as_str(), "a");
+    }
     #[test]
-    fn partial_eq_same() { assert_eq!(Sha256Hash("a".into()), Sha256Hash("a".into())); }
+    fn partial_eq_same() {
+        assert_eq!(Sha256Hash("a".into()), Sha256Hash("a".into()));
+    }
     #[test]
-    fn partial_eq_different() { assert_ne!(Sha256Hash("a".into()), Sha256Hash("b".into())); }
+    fn partial_eq_different() {
+        assert_ne!(Sha256Hash("a".into()), Sha256Hash("b".into()));
+    }
 }
