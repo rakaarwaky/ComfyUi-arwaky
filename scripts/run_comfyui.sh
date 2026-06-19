@@ -154,6 +154,12 @@ export AMD_LOG_LEVEL=5
 export ROCR_DEBUG=1
 export Caffe2_log_level=0
 
+# ── Disable ComfyUI-Manager network fetch during execution ─────────────────────
+MANAGER_CONFIG="$ROOT_DIR/ComfyUI/user/__manager/config.ini"
+if [ -f "$MANAGER_CONFIG" ]; then
+  sed -i 's/^network_mode = .*/network_mode = offline/' "$MANAGER_CONFIG"
+fi
+
 # ── Launch ─────────────────────────────────────────────────────────────────────
 echo "Starting ComfyUI Server on port $PORT..."
 echo "ComfyUI python: ${COMFYUI_PYTHON}"

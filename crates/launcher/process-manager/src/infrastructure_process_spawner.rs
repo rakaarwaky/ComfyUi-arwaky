@@ -126,6 +126,8 @@ impl ProcessPort for ProcessSpawner {
             .env("AMD_LOG_LEVEL", "5")
             .env("ROCR_DEBUG", "1")
             .env("Caffe2_log_level", "0")
+            // Disable ComfyUI-Manager network fetch during execution
+            .env("COMFYUI_MANAGER_NETWORK_MODE", "offline")
             .process_group(0);
 
         if let Some(hsa_ver) = params.hsa_override {
