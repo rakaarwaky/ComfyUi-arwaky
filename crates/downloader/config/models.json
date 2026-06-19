@@ -210,13 +210,6 @@
     "notes": "FLUX Dev Q5_K_S (quality/size sweet spot)"
   },
   {
-    "category": "diffusion_models",
-    "filename": "flux1-schnell-Q8_0.gguf",
-    "url": "https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q8_0.gguf",
-    "group": "flux",
-    "notes": "FLUX Schnell Q8_0 (fast generation)"
-  },
-  {
     "category": "diffusers",
     "filename": "stable-diffusion-xl-base-1.0",
     "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
@@ -243,13 +236,6 @@
     "url": "https://huggingface.co/neuregex/Bernini-1.3B-ComfyUI/resolve/main/bernini_r_1.3B-Q6_K.gguf",
     "group": "video",
     "notes": "Bernini-R 1.3B Renderer Q6_K GGUF (High quality, compatible with RX6800XT)"
-  },
-  {
-    "category": "diffusion_models",
-    "filename": "qwen-image-edit-2511-Q4_K_M.gguf",
-    "url": "https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_M.gguf",
-    "group": "qwen",
-    "notes": "Qwen-Image-Edit 2511 Q4_K_M GGUF (~11 GB VRAM, fits RX6800XT 16GB)"
   },
   {
     "category": "diffusion_models",
@@ -449,13 +435,6 @@
     "size_bytes": 249519144,
     "group": "flux",
     "notes": "Required by Image Edit (Flux.2 Dev)"
-  },
-  {
-    "category": "text_encoders",
-    "filename": "mistral_3_small_flux2_Q4_K_M.gguf",
-    "url": "https://huggingface.co/gguf-org/flux2-dev-gguf/resolve/main/cow-mistral3-small-q4_0.gguf",
-    "group": "flux",
-    "notes": "Mistral 3 Small FLUX2 Q4_K_M GGUF (~7.5 GB - optimized for 16GB VRAM)"
   },
   {
     "category": "loras",
@@ -781,14 +760,6 @@
     "notes": "FLUX.1 Dev Q4_K_S GGUF (~7 GB - optimized for 16GB VRAM)"
   },
   {
-    "category": "diffusion_models",
-    "filename": "flux1-krea-dev_fp8_scaled.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/FLUX.1-Krea-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-krea-dev_fp8_scaled.safetensors",
-    "size_bytes": 11907796828,
-    "group": "flux",
-    "notes": "Required by Text to Image (Flux.1 Krea Dev)"
-  },
-  {
     "category": "checkpoints",
     "filename": "NetaYumev35_pretrained_all_in_one.safetensors",
     "url": "https://huggingface.co/duongve/NetaYume-Lumina-Image-2.0/resolve/main/NetaYumev35_pretrained_all_in_one.safetensors",
@@ -857,46 +828,6 @@
     "notes": "Required by Text to Video (Wan 2.2)"
   },
   {
-    "category": "vae",
-    "filename": "cogvideox_vae.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/void-model/resolve/main/vae/cogvideox_vae.safetensors",
-    "size_bytes": 431216394,
-    "group": "video",
-    "notes": "Required by Video Inpaint (VOID)"
-  },
-  {
-    "category": "optical_flow",
-    "filename": "raft_large_C_T_SKHT_V2-ff5fadd5.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/void-model/resolve/main/optical_flow/raft_large_C_T_SKHT_V2-ff5fadd5.safetensors",
-    "size_bytes": 21065891,
-    "group": "other",
-    "notes": "Required by Video Inpaint (VOID)"
-  },
-  {
-    "category": "diffusion_models",
-    "filename": "void_pass2.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/void-model/resolve/main/diffusion_models/void_pass2.safetensors",
-    "size_bytes": 11145440133,
-    "group": "other",
-    "notes": "Required by Video Inpaint (VOID)"
-  },
-  {
-    "category": "diffusion_models",
-    "filename": "void_pass1.safetensors",
-    "url": "https://huggingface.co/Comfy-Org/void-model/resolve/main/diffusion_models/void_pass1.safetensors",
-    "size_bytes": 11145440133,
-    "group": "other",
-    "notes": "Required by Video Inpaint (VOID)"
-  },
-  {
-    "category": "loras",
-    "filename": "Wan21_CausVid_14B_T2V_lora_rank32.safetensors",
-    "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan21_CausVid_14B_T2V_lora_rank32.safetensors",
-    "size_bytes": 319113134,
-    "group": "video",
-    "notes": "Required by Video Inpainting (Wan2.1 VACE)"
-  },
-  {
     "category": "diffusion_models",
     "filename": "wan2.1-t2v-14b-Q4_K_S.gguf",
     "url": "https://huggingface.co/city96/Wan2.1-T2V-14B-GGUF/resolve/main/wan2.1-t2v-14b-Q4_K_S.gguf",
@@ -923,19 +854,5 @@
     "url": "https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/diffusion_models/ernie-image.safetensors",
     "group": "other",
     "notes": "ERNIE Image base model (~12 GB). Required by Text to Image (Ernie Image)"
-  },
-  {
-    "category": "diffusion_models",
-    "filename": "FireRed-Image-Edit-1.1-transformer-q4_k_m.gguf",
-    "url": "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1-ComfyUI/resolve/main/FireRed-Image-Edit-1.1-transformer-q4_k_m.gguf",
-    "group": "other",
-    "notes": "FireRed Image Edit 1.1 transformer Q4_K_M GGUF (~10 GB VRAM, fits RX6800XT 16GB). Required by Image Edit (FireRed Image Edit 1.1)"
-  },
-  {
-    "category": "loras",
-    "filename": "FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors",
-    "url": "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1-ComfyUI/resolve/main/FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors",
-    "group": "other",
-    "notes": "FireRed Image Edit 1.1 Lightning LoRA (8-step fast inference). Updated v1.2"
   }
 ]
