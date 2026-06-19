@@ -5,6 +5,7 @@ This document provides a detailed technical architecture overview of the ComfyUI
 ---
 
 ## 📖 Table of Contents
+
 1. [Core Architecture Overview](#core-architecture-overview)
 2. [Process Lifecycle Management](#process-lifecycle-management)
    - [Spawning the Child Process](#spawning-the-child-process)
@@ -12,15 +13,16 @@ This document provides a detailed technical architecture overview of the ComfyUI
 3. [Bounded Log Routing Pipeline](#bounded-log-routing-pipeline)
    - [Output Reader Threads](#output-reader-threads)
    - [Bounded MPSC Channel](#bounded-mpsc-channel)
-   - [Writer Thread & Batch Flushing](#writer-thread--batch-flushing)
+   - [Writer Thread &amp; Batch Flushing](#writer-thread--batch-flushing)
    - [Monotonic Log Pagination](#monotonic-log-pagination)
-4. [TCP Port Listener & Navigation](#tcp-port-listener--navigation)
+4. [TCP Port Listener &amp; Navigation](#tcp-port-listener--navigation)
 
 ---
 
 ## Core Architecture Overview
 
 ComfyUI Desktop is divided into a frontend webview shell and a backend launcher, orchestrated by Tauri v2:
+
 1. **Tauri Core (Rust Backend)**: Spawns the ComfyUI server process, monitors process health, processes raw logs, and exposes command interfaces to the frontend.
 2. **Splash Screen UI (HTML/CSS/JS)**: A lightweight startup interface that queries installation status, tracks downloader progress, displays real-time server startup logs, and informs the user of port connection timeouts.
 3. **ComfyUI Server (Python Backend)**: The standard stable diffusion graph execution engine, isolated within a local virtual environment (`venv`).
@@ -52,6 +54,7 @@ ComfyUI Desktop is divided into a frontend webview shell and a backend launcher,
 ### Spawning the Child Process
 
 The application invokes the Python backend utilizing Rust's `std::process::Command` library. Key details include:
+
 * **Venv Resolution**: The launcher checks multiple directories to find the active Python binary:
   1. The project-level `./venv/bin/python` directory.
   2. The Tauri resource bundle directory.
@@ -62,6 +65,7 @@ The application invokes the Python backend utilizing Rust's `std::process::Comma
 ### Graceful Shutdown Sequence
 
 When the Tauri app receives a `RunEvent::Exit` signal, a strict cleanup protocol is triggered:
+
 1. **Set Shutdown Flag**: The `ShutdownSignal` (a shared `AtomicBool`) is set to `true`. This causes background threads to safely terminate their execution loops.
 2. **Drop MPSC Sender**: The launcher drops the master Log MPSC sender handle (`LogSender`), closing the channel and signaling the log writer thread that no more entries are coming.
 3. **Process Group Kill (`SIGTERM` → `SIGKILL`)**:
@@ -70,6 +74,7 @@ When the Tauri app receives a `RunEvent::Exit` signal, a strict cleanup protocol
      ```rust
      unsafe { libc::kill(-pid, libc::SIGTERM); }
      ```
+
      *Note: Passing a negative PID value to `kill()` distributes the signal to all processes belonging to that PGID, cleaning up any nested PyTorch/C++ compiler threads.*
    - The launcher enters a loop checking `child.try_wait()` up to 10 times (sleeping 50ms per iteration) to verify termination.
    - If the process group does not terminate within 500ms, it executes a hard kill:
@@ -113,6 +118,7 @@ Logs are critical for troubleshooting startup issues (like ROCm compatibility er
 ### Output Reader Threads
 
 When the Python process starts, the backend spawns two distinct output reading threads:
+
 * **Stdout Reader**: Reads lines sequentially from the stdout stream using `BufReader::lines()`.
 * **Stderr Reader**: Reads lines sequentially from the stderr stream using `BufReader::lines()`.
 
@@ -121,6 +127,7 @@ Each reader increments a shared counter in `LogStats` to track the total volume 
 ### Bounded MPSC Channel
 
 Lines parsed by the reader threads are converted into `LogMessage` structures and dispatched to a multi-producer, single-consumer (MPSC) channel created via `std::sync::mpsc::sync_channel`:
+
 * **Channel Capacity**: Bounded to **1000** messages (`LOG_CHANNEL_CAPACITY`).
 * **Non-blocking Dispatch (`try_send`)**:
   Instead of using blocking `.send()`, readers use `.try_send()`. If ComfyUI emits logs faster than the UI writer can drain them (e.g. during a raw binary stream dump or deep model loading debug log), the readers drop overflow messages to protect the host memory:
@@ -129,15 +136,18 @@ Lines parsed by the reader threads are converted into `LogMessage` structures an
       stats.dropped.fetch_add(1, Ordering::Relaxed);
   }
   ```
+
   This guarantees that log routing never locks the reader threads or consumes excessive memory.
 
 ### Writer Thread & Batch Flushing
 
 A single background thread is dedicated to consuming the MPSC channel:
+
 * **Drain Interval**: The writer thread runs in a loop, polling the receiver channel with a timeout:
   ```rust
   log_rx.recv_timeout(Duration::from_millis(100))
   ```
+
   If a log is received, it is appended to a local buffer vector (`batch`).
 * **Flush Conditions**: The batch is flushed to the webview UI using Tauri's `.emit()` command under two conditions:
   1. The batch vector reaches its capacity limit of **50** messages (`BATCH_MAX_SIZE`).
@@ -148,6 +158,7 @@ A single background thread is dedicated to consuming the MPSC channel:
 ### Monotonic Log Pagination
 
 To display logs in the Tauri app, the writer pushes all received messages to a memory circular buffer (`LogBuffer`):
+
 * **Memory Constraints**: The log buffer is backed by a `VecDeque` capped at a maximum of **2,000** entries (`MAX_LOG_ENTRIES`).
 * **Monotonic Incremental IDs**: Each log entry is assigned a monotonic `u64` ID. When the buffer reaches capacity, the oldest logs are removed via `pop_front()`, but the next ID counter continues to increment.
 * **Safe Client Queries**: The frontend queries logs using the Tauri command `get_logs(last_id)`. The backend returns entries with an ID greater than `last_id`. Since the IDs are monotonic, client-side pagination survives log buffer rotation (`pop_front`), preventing duplication and data skips.
@@ -157,6 +168,7 @@ To display logs in the Tauri app, the writer pushes all received messages to a m
 ## TCP Port Listener & Navigation
 
 While ComfyUI launches, the splash screen UI is rendered in the webview. The backend spawns a port polling thread to detect when the server is ready:
+
 1. **Liveness Verification**: The thread enters a loop, checking if the child process has exited prematurely:
    ```rust
    if let Some(ref mut child) = *child_lock {

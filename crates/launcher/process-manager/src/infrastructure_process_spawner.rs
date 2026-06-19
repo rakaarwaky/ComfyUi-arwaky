@@ -122,9 +122,10 @@ impl ProcessPort for ProcessSpawner {
             .env("HIP_CACHE_DIR", hip_cache)
             .env("PYTHONPYCACHEPREFIX", pycache)
             // ROCm/HIP logging — helps distinguish hang vs stuck
-            .env("HIP_LOG_LEVEL", "1")
-            .env("AMD_LOG_LEVEL", "4")
-            .env("ROCR_DEBUG", "0")
+            .env("HIP_LOG_LEVEL", "5")
+            .env("AMD_LOG_LEVEL", "5")
+            .env("ROCR_DEBUG", "1")
+            .env("Caffe2_log_level", "0")
             .process_group(0);
 
         if let Some(hsa_ver) = params.hsa_override {

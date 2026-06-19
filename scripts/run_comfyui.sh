@@ -149,9 +149,10 @@ export HIP_DISABLE_RDC=1
 export HIPCC_VERBOSE=0
 
 # ── ROCm/HIP logging (helps detect hang vs stuck) ─────────────────────────────
-export HIP_LOG_LEVEL=1
-export AMD_LOG_LEVEL=4
-export ROCR_DEBUG=0
+export HIP_LOG_LEVEL=5
+export AMD_LOG_LEVEL=5
+export ROCR_DEBUG=1
+export Caffe2_log_level=0
 
 # ── Launch ─────────────────────────────────────────────────────────────────────
 echo "Starting ComfyUI Server on port $PORT..."
