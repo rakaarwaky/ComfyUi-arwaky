@@ -28,6 +28,9 @@ __pycache__/
 # /dist/ is ignored — AppImage/RPM are built here (not tracked in Git)
 /dist/
 
+# Tool caches (comgr, matplotlib, uv, etc.)
+.cache/
+
 # OS files
 .DS_Store
 Thumbs.db
