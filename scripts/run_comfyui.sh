@@ -84,6 +84,7 @@ echo "ComfyUI launcher — GPU $DETECTED_GPU | port $PORT | guard=$GUARD | vram_
 export HIP_VISIBLE_DEVICES="$DETECTED_GPU"
 export HSA_OVERRIDE_GFX_VERSION="10.3.0"
 
+# Note: --normalvram was removed in ComfyUI v0.25 — default (no flag) is dynamic VRAM.
 COMFYUI_VRAM_ARGS=()
 if [[ "$VRAM_MODE" == "auto" || -z "$VRAM_MODE" ]]; then
   VRAM_BYTES=$(grep "GPU\[${DETECTED_GPU}\]" -A 20 <(rocm-smi --showmeminfo vram 2>/dev/null) \
@@ -91,22 +92,20 @@ if [[ "$VRAM_MODE" == "auto" || -z "$VRAM_MODE" ]]; then
   VRAM_BYTES="${VRAM_BYTES:-0}"
   if [[ "$VRAM_BYTES" -ge 12000000000 ]]; then
     COMFYUI_VRAM_ARGS=(--highvram)
-  elif [[ "$VRAM_BYTES" -ge 6000000000 ]]; then
-    COMFYUI_VRAM_ARGS=(--normalvram)
-  else
+  elif [[ "$VRAM_BYTES" -lt 6000000000 ]]; then
     COMFYUI_VRAM_ARGS=(--lowvram)
   fi
+  # else: no flag = dynamic VRAM
 elif [[ "$VRAM_MODE" == "high" ]]; then
   COMFYUI_VRAM_ARGS=(--highvram)
-elif [[ "$VRAM_MODE" == "normal" ]]; then
-  COMFYUI_VRAM_ARGS=(--normalvram)
 elif [[ "$VRAM_MODE" == "low" ]]; then
   COMFYUI_VRAM_ARGS=(--lowvram)
 elif [[ "$VRAM_MODE" == "cpu" ]]; then
   COMFYUI_VRAM_ARGS=(--cpu)
+elif [[ "$VRAM_MODE" == "normal" ]]; then
+  : # no flag needed — default is dynamic VRAM
 else
   echo "Warning: unknown --vram-mode '$VRAM_MODE', falling back to auto" >&2
-  COMFYUI_VRAM_ARGS=(--normalvram)
 fi
 
 # ── Activate venv ──────────────────────────────────────────────────────────────

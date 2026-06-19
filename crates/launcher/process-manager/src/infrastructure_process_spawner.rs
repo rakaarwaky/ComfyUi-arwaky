@@ -100,16 +100,14 @@ impl ProcessPort for ProcessSpawner {
         }
 
         // Add appropriate VRAM flags
+        // Note: --normalvram was removed in ComfyUI v0.25 — default (no flag) is dynamic VRAM.
         if let Some(bytes) = vram_bytes {
             if bytes >= 12_000_000_000 {
                 cmd.arg("--highvram");
-            } else if bytes >= 6_000_000_000 {
-                cmd.arg("--normalvram");
-            } else {
+            } else if bytes < 6_000_000_000 {
                 cmd.arg("--lowvram");
             }
-        } else {
-            cmd.arg("--normalvram"); // Default fallback if detection fails
+            // else: no flag = dynamic VRAM (replaces old --normalvram)
         }
 
         // Persistent ROCm/Torch/Triton cache — kept outside the ComfyUI project
