@@ -23,18 +23,27 @@ impl App {
                             let dest_dir = self.config.resolve_category_dir(&m.category);
                             let dest_path = dest_dir.join(&m.filename);
                             let exists = file_exists_valid(&dest_path, m.size_bytes, Some(&m.url));
-                            if self.active_tab == 1 { exists } else { !exists }
+                            if self.active_tab == 1 {
+                                exists
+                            } else {
+                                !exists
+                            }
                         }
                         _ => {
                             let cat_idx = self.active_tab - 3;
                             if cat_idx < self.categories.len() {
                                 m.category.eq_ignore_ascii_case(&self.categories[cat_idx])
-                            } else { true }
+                            } else {
+                                true
+                            }
                         }
                     };
-                    if !match_tab { return false; }
-                    if self.search_query.is_empty() { true }
-                    else {
+                    if !match_tab {
+                        return false;
+                    }
+                    if self.search_query.is_empty() {
+                        true
+                    } else {
                         let q = self.search_query.to_lowercase();
                         m.filename.to_lowercase().contains(&q)
                             || m.category.to_lowercase().contains(&q)
@@ -70,19 +79,29 @@ impl App {
             let dest_dir = self.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
             if !file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
-                && group.as_ref().is_none_or(|g| m.group == *g) {
-                    self.selected_indices.push(i);
-                }
+                && group.as_ref().is_none_or(|g| m.group == *g)
+            {
+                self.selected_indices.push(i);
+            }
         }
-        self.add_log(&format!("Bulk selected group '{}' ({} items).", group.unwrap_or("All Missing"), self.selected_indices.len()));
+        self.add_log(&format!(
+            "Bulk selected group '{}' ({} items).",
+            group.unwrap_or("All Missing"),
+            self.selected_indices.len()
+        ));
     }
 
     pub fn select_all_missing_in_view(&mut self) {
         let filtered = self.filtered_models();
         let mut count = 0;
         for (orig_idx, m) in filtered {
-            let dest = self.config.resolve_category_dir(&m.category).join(&m.filename);
-            if !file_exists_valid(&dest, m.size_bytes, Some(&m.url)) && !self.selected_indices.contains(&orig_idx) {
+            let dest = self
+                .config
+                .resolve_category_dir(&m.category)
+                .join(&m.filename);
+            if !file_exists_valid(&dest, m.size_bytes, Some(&m.url))
+                && !self.selected_indices.contains(&orig_idx)
+            {
                 self.selected_indices.push(orig_idx);
                 count += 1;
             }
@@ -91,8 +110,13 @@ impl App {
     }
 
     pub fn ensure_active_tab_visible(&mut self, total_pages: usize) {
-        if self.active_tab < self.tab_offset { self.tab_offset = self.active_tab; }
-        else if self.active_tab >= self.tab_offset + 10 { self.tab_offset = self.active_tab.saturating_sub(9); }
-        if self.tab_offset + 10 > total_pages { self.tab_offset = total_pages.saturating_sub(10); }
+        if self.active_tab < self.tab_offset {
+            self.tab_offset = self.active_tab;
+        } else if self.active_tab >= self.tab_offset + 10 {
+            self.tab_offset = self.active_tab.saturating_sub(9);
+        }
+        if self.tab_offset + 10 > total_pages {
+            self.tab_offset = total_pages.saturating_sub(10);
+        }
     }
 }

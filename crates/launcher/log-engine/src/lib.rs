@@ -1,10 +1,10 @@
 // PURPOSE: log-engine — logging free functions + surface commands for log polling.
 
-mod surface_log_writer;
 mod surface_log_commands;
+mod surface_log_writer;
 
-pub use surface_log_writer::*;
 pub use surface_log_commands::*;
+pub use surface_log_writer::*;
 
 // ── Constants ──
 

@@ -38,11 +38,7 @@ fn get_comfyui_cache_env() -> (PathBuf, PathBuf, PathBuf) {
     };
     let _ = std::fs::create_dir_all(&pycache);
 
-    (
-        base.clone(),
-        base.join("hip"),
-        pycache,
-    )
+    (base.clone(), base.join("hip"), pycache)
 }
 
 pub struct ProcessSpawner;
@@ -189,9 +185,13 @@ impl ProcessSpawner {
             }
         };
         println!("Terminating ComfyUI process group: {pid}");
-        unsafe { libc::kill(-pid, libc::SIGTERM); }
+        unsafe {
+            libc::kill(-pid, libc::SIGTERM);
+        }
         std::thread::sleep(Duration::from_millis(500));
-        unsafe { libc::kill(-pid, libc::SIGKILL); }
+        unsafe {
+            libc::kill(-pid, libc::SIGKILL);
+        }
     }
 
     /// Wait for process to exit with timeout.

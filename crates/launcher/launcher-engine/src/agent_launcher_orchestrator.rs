@@ -3,13 +3,13 @@
 
 use std::path::PathBuf;
 use std::sync::mpsc::SyncSender;
-use std::sync::{Arc, atomic::AtomicBool};
+use std::sync::{atomic::AtomicBool, Arc};
 
-use launcher_shared::contract_config_port::ConfigPort;
 use launcher_shared::contract_backend_install_protocol::BackendInstallProtocol;
+use launcher_shared::contract_config_port::ConfigPort;
 use launcher_shared::contract_gpu_detection_protocol::GpuDetectionProtocol;
-use launcher_shared::contract_process_port::{ProcessPort, SpawnParams};
 use launcher_shared::contract_launcher_aggregate::LauncherAggregate;
+use launcher_shared::contract_process_port::{ProcessPort, SpawnParams};
 use launcher_shared::BackendStatus;
 use launcher_shared::{
     AppConfig, BackendInstallError, BackendInstallEvent, ConfigError, GpuIndex, InstallDir,
@@ -48,7 +48,8 @@ impl LauncherAggregate for LauncherOrchestrator {
                     .as_ref()
                     .and_then(|py| {
                         config.comfyui_dir.as_ref().map(|comfy| {
-                            std::path::Path::new(py).exists() && std::path::Path::new(comfy).exists()
+                            std::path::Path::new(py).exists()
+                                && std::path::Path::new(comfy).exists()
                         })
                     })
                     .unwrap_or(false);
@@ -120,9 +121,10 @@ impl LauncherAggregate for LauncherOrchestrator {
         log_tx: SyncSender<LogMessage>,
         on_exit: Box<dyn Fn() + Send>,
     ) -> Result<(), BackendInstallError> {
-        let config = self.config_port.load().map_err(|e| {
-            BackendInstallError::VerificationFailed(format!("Config load: {}", e))
-        })?;
+        let config = self
+            .config_port
+            .load()
+            .map_err(|e| BackendInstallError::VerificationFailed(format!("Config load: {}", e)))?;
 
         // Resolve paths
         let default_dir = self.backend_protocol.default_install_dir();
@@ -143,23 +145,25 @@ impl LauncherAggregate for LauncherOrchestrator {
         let input_dir = config.input_dir.as_ref().map(std::path::PathBuf::from);
         let user_dir = config.user_dir.as_ref().map(std::path::PathBuf::from);
 
-        let gpu_index = self.gpu_protocol.detect_dgpu_index()
+        let gpu_index = self
+            .gpu_protocol
+            .detect_dgpu_index()
             .unwrap_or_else(|_| GpuIndex("0".to_string()));
-        let hsa_override = self.gpu_protocol.detect_hsa_override()
-            .unwrap_or(None);
+        let hsa_override = self.gpu_protocol.detect_hsa_override().unwrap_or(None);
 
-        self.process_port.spawn(SpawnParams {
-            python_path: &python_path,
-            comfyui_dir: &comfyui_dir,
-            extra_model_paths: &extra_model_paths,
-            gpu_index: &gpu_index,
-            hsa_override: hsa_override.as_ref(),
-            output_dir: output_dir.as_deref(),
-            input_dir: input_dir.as_deref(),
-            user_dir: user_dir.as_deref(),
-            log_tx,
-            on_exit,
-        })
-        .map_err(|e| BackendInstallError::VerificationFailed(format!("Process: {e}")))
+        self.process_port
+            .spawn(SpawnParams {
+                python_path: &python_path,
+                comfyui_dir: &comfyui_dir,
+                extra_model_paths: &extra_model_paths,
+                gpu_index: &gpu_index,
+                hsa_override: hsa_override.as_ref(),
+                output_dir: output_dir.as_deref(),
+                input_dir: input_dir.as_deref(),
+                user_dir: user_dir.as_deref(),
+                log_tx,
+                on_exit,
+            })
+            .map_err(|e| BackendInstallError::VerificationFailed(format!("Process: {e}")))
     }
 }

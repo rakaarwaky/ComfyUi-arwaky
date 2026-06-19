@@ -26,10 +26,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn display_rocm_not_available() { assert_eq!(GpuError::RocmNotAvailable.to_string(), "ROCm is not available on this system"); }
+    fn display_rocm_not_available() {
+        assert_eq!(
+            GpuError::RocmNotAvailable.to_string(),
+            "ROCm is not available on this system"
+        );
+    }
     #[test]
-    fn display_no_gpu_found() { assert_eq!(GpuError::NoGpuFound.to_string(), "No compatible GPU found"); }
+    fn display_no_gpu_found() {
+        assert_eq!(GpuError::NoGpuFound.to_string(), "No compatible GPU found");
+    }
     #[test]
-    fn display_hsa_detection_failed() { assert_eq!(GpuError::HsaDetectionFailed("x".into()).to_string(), "HSA detection failed: x"); }
+    fn display_hsa_detection_failed() {
+        assert_eq!(
+            GpuError::HsaDetectionFailed("x".into()).to_string(),
+            "HSA detection failed: x"
+        );
+    }
 }
-

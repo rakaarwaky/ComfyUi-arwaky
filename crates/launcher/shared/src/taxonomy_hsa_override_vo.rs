@@ -14,13 +14,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn as_str_returns_inner() { assert_eq!(HsaOverride("10.3.0").as_str(), "10.3.0"); }
+    fn as_str_returns_inner() {
+        assert_eq!(HsaOverride("10.3.0").as_str(), "10.3.0");
+    }
     #[test]
-    fn partial_eq_same() { assert_eq!(HsaOverride("10.3.0"), HsaOverride("10.3.0")); }
+    fn partial_eq_same() {
+        assert_eq!(HsaOverride("10.3.0"), HsaOverride("10.3.0"));
+    }
     #[test]
-    fn partial_eq_different() { assert_ne!(HsaOverride("10.3.0"), HsaOverride("11.0.0")); }
+    fn partial_eq_different() {
+        assert_ne!(HsaOverride("10.3.0"), HsaOverride("11.0.0"));
+    }
     #[test]
-    fn copy_works() { let a = HsaOverride("x"); let b = a; assert_eq!(a, b); }
+    fn copy_works() {
+        let a = HsaOverride("x");
+        let b = a;
+        assert_eq!(a, b);
+    }
     #[test]
-    fn debug_format() { assert!(format!("{:?}", HsaOverride("x")).contains("x")); }
+    fn debug_format() {
+        assert!(format!("{:?}", HsaOverride("x")).contains("x"));
+    }
 }

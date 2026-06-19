@@ -66,7 +66,9 @@ pub fn handle_event(
                                         return Ok(false);
                                     }
                                 }
-                                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                KeyCode::Char('c')
+                                    if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                                {
                                     if app.rx.is_some() {
                                         app.add_log("User cancelled downloading queue.");
                                         app.cancel_token.store(true, Ordering::Release);
@@ -87,7 +89,11 @@ pub fn handle_event(
                                     app.state = AppState::Settings {
                                         active_field: 0,
                                         models_dir_input: app.config.models_dir.clone(),
-                                        hf_token_input: app.config.hf_token.clone().unwrap_or_default(),
+                                        hf_token_input: app
+                                            .config
+                                            .hf_token
+                                            .clone()
+                                            .unwrap_or_default(),
                                     };
                                     app.add_log("Settings menu opened.");
                                 }
@@ -114,7 +120,11 @@ pub fn handle_event(
                                     if filtered_len > 0 {
                                         let i = match app.list_state.selected() {
                                             Some(i) => {
-                                                if i == 0 { filtered_len - 1 } else { i - 1 }
+                                                if i == 0 {
+                                                    filtered_len - 1
+                                                } else {
+                                                    i - 1
+                                                }
                                             }
                                             None => 0,
                                         };
@@ -126,7 +136,11 @@ pub fn handle_event(
                                     if filtered_len > 0 {
                                         let i = match app.list_state.selected() {
                                             Some(i) => {
-                                                if i >= filtered_len - 1 { 0 } else { i + 1 }
+                                                if i >= filtered_len - 1 {
+                                                    0
+                                                } else {
+                                                    i + 1
+                                                }
                                             }
                                             None => 0,
                                         };
@@ -143,7 +157,9 @@ pub fn handle_event(
                                     app.refresh_sizes();
                                 }
                                 KeyCode::Char(c) if c.is_ascii_digit() => {
-                                    let digit = c.to_digit(10).expect("already checked is_ascii_digit") as usize;
+                                    let digit =
+                                        c.to_digit(10).expect("already checked is_ascii_digit")
+                                            as usize;
                                     let total_pages = 3 + app.categories.len();
                                     if digit < total_pages {
                                         app.active_tab = digit;
@@ -187,7 +203,11 @@ pub fn handle_event(
                             *active_field = (*active_field + 1) % 4;
                         }
                         KeyCode::BackTab | KeyCode::Up => {
-                            *active_field = if *active_field == 0 { 3 } else { *active_field - 1 };
+                            *active_field = if *active_field == 0 {
+                                3
+                            } else {
+                                *active_field - 1
+                            };
                         }
                         KeyCode::Enter => {
                             if *active_field == 2 {
@@ -361,9 +381,7 @@ pub fn handle_event(
                         }
                     }
                 }
-                AppState::Settings { .. } => {
-                    /* mouse handling unchanged from original */
-                }
+                AppState::Settings { .. } => { /* mouse handling unchanged from original */ }
                 AppState::DiskSpaceWarning { .. } => {
                     let popup_rect = centered_rect(65, 30, size);
                     if mouse.row == popup_rect.y + 9 {

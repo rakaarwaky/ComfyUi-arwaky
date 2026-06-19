@@ -26,10 +26,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn display_python_not_found() { assert_eq!(ProcessError::PythonNotFound("/usr/bin".into()).to_string(), "Python binary not found at: /usr/bin"); }
+    fn display_python_not_found() {
+        assert_eq!(
+            ProcessError::PythonNotFound("/usr/bin".into()).to_string(),
+            "Python binary not found at: /usr/bin"
+        );
+    }
     #[test]
-    fn display_spawn_failed() { assert_eq!(ProcessError::SpawnFailed("err".into()).to_string(), "Process spawn failed: err"); }
+    fn display_spawn_failed() {
+        assert_eq!(
+            ProcessError::SpawnFailed("err".into()).to_string(),
+            "Process spawn failed: err"
+        );
+    }
     #[test]
-    fn display_smoke_test_failed() { assert_eq!(ProcessError::SmokeTestFailed("fail".into()).to_string(), "Smoke test failed: fail"); }
+    fn display_smoke_test_failed() {
+        assert_eq!(
+            ProcessError::SmokeTestFailed("fail".into()).to_string(),
+            "Smoke test failed: fail"
+        );
+    }
 }
-

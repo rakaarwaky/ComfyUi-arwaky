@@ -1,8 +1,8 @@
 // PURPOSE: Config loader infrastructure — implements ConfigPort (load + ensure).
 
-use std::path::{Path, PathBuf};
 use launcher_shared::contract_config_port::ConfigPort;
 use launcher_shared::{normalize_path, AppConfig, ConfigError, InstallDir};
+use std::path::{Path, PathBuf};
 
 pub struct ConfigLoader {
     config_path: PathBuf,
@@ -30,12 +30,15 @@ impl ConfigLoader {
 impl ConfigPort for ConfigLoader {
     fn load(&self) -> Result<AppConfig, ConfigError> {
         if self.config_path.exists() {
-            let content = std::fs::read_to_string(&self.config_path)
-                .map_err(|_e| ConfigError::NotFound(self.config_path.to_string_lossy().to_string()))?;
+            let content = std::fs::read_to_string(&self.config_path).map_err(|_e| {
+                ConfigError::NotFound(self.config_path.to_string_lossy().to_string())
+            })?;
             serde_yaml::from_str::<AppConfig>(&content)
                 .map_err(|e| ConfigError::ParseFailed(e.to_string()))
         } else {
-            Err(ConfigError::NotFound(self.config_path.to_string_lossy().to_string()))
+            Err(ConfigError::NotFound(
+                self.config_path.to_string_lossy().to_string(),
+            ))
         }
     }
 

@@ -1,7 +1,7 @@
 use std::path::Path;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use crate::taxonomy_config_vo::Config;
 use crate::taxonomy_download_event_vo::DownloadEvent;

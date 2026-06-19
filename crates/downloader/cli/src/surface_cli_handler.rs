@@ -5,18 +5,18 @@ use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
+use downloader_config::ConfigLoader;
 use downloader_dl::agent_downloader_orchestrator::DownloaderOrchestrator;
 use downloader_dl::capabilities_download_engine::DownloadEngine;
 use downloader_file_utils::capabilities_file_checker::FileChecker;
 use downloader_file_utils::infrastructure_cache_adapter::SizeCache;
 use downloader_file_utils::infrastructure_fs_adapter::FsAdapter;
-use downloader_config::ConfigLoader;
 use downloader_shared::contract_cache_port::CachePort;
 use downloader_shared::contract_config_port::ConfigPort;
 use downloader_shared::contract_download_protocol::DownloadProtocol;
+use downloader_shared::contract_downloader_aggregate::DownloaderAggregate;
 use downloader_shared::contract_file_port::FileValidationPort;
 use downloader_shared::contract_file_protocol::FileValidationProtocol;
-use downloader_shared::contract_downloader_aggregate::DownloaderAggregate;
 use downloader_shared::taxonomy_download_event_vo::DownloadEvent;
 use downloader_shared::taxonomy_model_vo::Model;
 
@@ -134,7 +134,10 @@ fn cmd_download(
 
     // Check if already exists
     if orch.file_exists_valid(&dest_path, model.size_bytes, Some(&model.url)) {
-        println!("✓ Already downloaded: {}/{}", model.category, model.filename);
+        println!(
+            "✓ Already downloaded: {}/{}",
+            model.category, model.filename
+        );
         return Ok(());
     }
 
@@ -179,7 +182,10 @@ fn cmd_download(
                     println!("\r  ✓ Downloaded: {filename}        ");
                     completed = true;
                 } else {
-                    println!("\r  ✗ Failed: {filename} — {}", error_msg.unwrap_or_default());
+                    println!(
+                        "\r  ✗ Failed: {filename} — {}",
+                        error_msg.unwrap_or_default()
+                    );
                     failed = true;
                 }
             }

@@ -1,14 +1,14 @@
 // PURPOSE: Aggregate trait — the ONE interface surfaces call.
 
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
-use crate::taxonomy_install_dir_vo::InstallDir;
-use crate::taxonomy_backend_status_vo::BackendStatus;
+use crate::taxonomy_app_config_vo::AppConfig;
 use crate::taxonomy_backend_install_error_vo::BackendInstallError;
 use crate::taxonomy_backend_install_event_vo::BackendInstallEvent;
-use crate::taxonomy_app_config_vo::AppConfig;
+use crate::taxonomy_backend_status_vo::BackendStatus;
+use crate::taxonomy_install_dir_vo::InstallDir;
 use crate::taxonomy_log_message_vo::LogMessage;
 use crate::ConfigError;
 

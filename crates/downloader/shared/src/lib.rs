@@ -9,6 +9,6 @@ pub mod contract_cache_port;
 pub mod contract_config_port;
 pub mod contract_download_port;
 pub mod contract_download_protocol;
+pub mod contract_downloader_aggregate;
 pub mod contract_file_port;
 pub mod contract_file_protocol;
-pub mod contract_downloader_aggregate;

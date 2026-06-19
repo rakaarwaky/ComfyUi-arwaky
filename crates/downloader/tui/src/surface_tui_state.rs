@@ -23,14 +23,28 @@ pub struct ActiveDownload {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum InputMode { Normal, Search }
+pub enum InputMode {
+    Normal,
+    Search,
+}
 
 #[derive(Clone, PartialEq)]
 pub enum AppState {
     Menu,
-    Settings { active_field: usize, models_dir_input: String, hf_token_input: String },
-    DiskSpaceWarning { required: u64, available: u64 },
-    Finished { completed: usize, failed: usize, message: String },
+    Settings {
+        active_field: usize,
+        models_dir_input: String,
+        hf_token_input: String,
+    },
+    DiskSpaceWarning {
+        required: u64,
+        available: u64,
+    },
+    Finished {
+        completed: usize,
+        failed: usize,
+        message: String,
+    },
 }
 
 pub struct App {
@@ -60,22 +74,39 @@ pub struct App {
 impl App {
     pub fn new(models: Vec<Model>, config: Config) -> Self {
         let mut list_state = ListState::default();
-        if !models.is_empty() { list_state.select(Some(0)); }
+        if !models.is_empty() {
+            list_state.select(Some(0));
+        }
         let mut cats: Vec<String> = models.iter().map(|m| m.category.clone()).collect();
-        cats.sort(); cats.dedup();
+        cats.sort();
+        cats.dedup();
         let log_path = Self::session_path();
-        if let Some(parent) = log_path.parent() { let _ = std::fs::create_dir_all(parent); }
+        if let Some(parent) = log_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         let _ = SESSION_LOG_PATH.set(log_path);
         let mut app = Self {
-            models, config, list_state,
-            selected_indices: Vec::new(), state: AppState::Menu, rx: None,
+            models,
+            config,
+            list_state,
+            selected_indices: Vec::new(),
+            state: AppState::Menu,
+            rx: None,
             cancel_token: Arc::new(AtomicBool::new(false)),
-            input_mode: InputMode::Normal, search_query: String::new(),
-            filtered_cache: Vec::new(), filtered_cache_dirty: true,
-            logs: Vec::new(), active_tab: 0, tab_offset: 0, categories: cats,
+            input_mode: InputMode::Normal,
+            search_query: String::new(),
+            filtered_cache: Vec::new(),
+            filtered_cache_dirty: true,
+            logs: Vec::new(),
+            active_tab: 0,
+            tab_offset: 0,
+            categories: cats,
             active_downloads: vec![None; 2],
-            completed_count: 0, failed_count: 0, total_to_download: 0,
-            log_viewer_visible: false, log_scroll: 0,
+            completed_count: 0,
+            failed_count: 0,
+            total_to_download: 0,
+            log_viewer_visible: false,
+            log_scroll: 0,
         };
         app.add_log("Downloader initialized successfully.");
         app
@@ -83,8 +114,12 @@ impl App {
 
     fn session_path() -> PathBuf {
         let secs = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".cache/comfyui-downloader/logs").join(format!("session-{secs}.log"))
+        PathBuf::from(home)
+            .join(".cache/comfyui-downloader/logs")
+            .join(format!("session-{secs}.log"))
     }
 }

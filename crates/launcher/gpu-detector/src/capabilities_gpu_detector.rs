@@ -17,7 +17,9 @@ impl GpuDetectionProtocol for GpuDetector {
     fn detect_dgpu_index(&self) -> Result<GpuIndex, GpuError> {
         let output = std::process::Command::new("rocm-smi")
             .env("PATH", get_rocm_path())
-            .arg("--showmeminfo").arg("vram").output();
+            .arg("--showmeminfo")
+            .arg("vram")
+            .output();
         match output {
             Ok(out) if out.status.success() => {
                 let stdout = String::from_utf8_lossy(&out.stdout);
@@ -29,7 +31,10 @@ impl GpuDetectionProtocol for GpuDetector {
                             let gpu = &line[start + 1..end];
                             if let Some(col) = line.rfind(':') {
                                 if let Ok(vram) = line[col + 1..].trim().parse::<u64>() {
-                                    if vram > max_vram { max_vram = vram; best_gpu = gpu.to_string(); }
+                                    if vram > max_vram {
+                                        max_vram = vram;
+                                        best_gpu = gpu.to_string();
+                                    }
                                 }
                             }
                         }
@@ -50,13 +55,15 @@ impl GpuDetectionProtocol for GpuDetector {
         if !topology.exists() {
             return Ok(None);
         }
-        let entries = std::fs::read_dir(topology)
-            .map_err(|e| GpuError::HsaDetectionFailed(e.to_string()))?;
+        let entries =
+            std::fs::read_dir(topology).map_err(|e| GpuError::HsaDetectionFailed(e.to_string()))?;
         for entry in entries.flatten() {
             let gfx_path = entry.path().join("gfx_target_version");
             if let Ok(content) = std::fs::read_to_string(&gfx_path) {
                 let ver = content.trim();
-                if ver.is_empty() || ver == "0" { continue; }
+                if ver.is_empty() || ver == "0" {
+                    continue;
+                }
                 if let Ok(v) = ver.parse::<u32>() {
                     let patch = v % 100;
                     if patch > 0 {
@@ -74,14 +81,17 @@ impl GpuDetectionProtocol for GpuDetector {
         // Fallback: try rocm-smi --showhw
         let smi_output = std::process::Command::new("rocm-smi")
             .env("PATH", get_rocm_path())
-            .arg("--showhw").output();
+            .arg("--showhw")
+            .output();
         if let Ok(out) = smi_output {
             if out.status.success() {
                 let stdout = String::from_utf8_lossy(&out.stdout);
                 for line in stdout.lines() {
                     if let Some(pos) = line.rfind("gfx") {
                         let version: String = line[pos + 3..]
-                            .chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
+                            .chars()
+                            .take_while(|c| c.is_ascii_digit() || *c == '.')
+                            .collect();
                         if !version.is_empty() {
                             return Ok(Self::parse_hsa_override(&version));
                         }
@@ -117,15 +127,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_rdna2_native() { assert_eq!(GpuDetector::parse_hsa_override("1030"), None); }
+    fn test_parse_rdna2_native() {
+        assert_eq!(GpuDetector::parse_hsa_override("1030"), None);
+    }
     #[test]
-    fn test_parse_rdna2_patched() { assert_eq!(GpuDetector::parse_hsa_override("1031"), Some(HsaOverride("10.3.0"))); }
+    fn test_parse_rdna2_patched() {
+        assert_eq!(
+            GpuDetector::parse_hsa_override("1031"),
+            Some(HsaOverride("10.3.0"))
+        );
+    }
     #[test]
-    fn test_parse_rdna3_1100_native() { assert_eq!(GpuDetector::parse_hsa_override("1100"), None); }
+    fn test_parse_rdna3_1100_native() {
+        assert_eq!(GpuDetector::parse_hsa_override("1100"), None);
+    }
     #[test]
-    fn test_parse_rdna3_1101_patched() { assert_eq!(GpuDetector::parse_hsa_override("1101"), Some(HsaOverride("11.0.0"))); }
+    fn test_parse_rdna3_1101_patched() {
+        assert_eq!(
+            GpuDetector::parse_hsa_override("1101"),
+            Some(HsaOverride("11.0.0"))
+        );
+    }
     #[test]
-    fn test_parse_invalid() { assert_eq!(GpuDetector::parse_hsa_override("invalid"), None); }
+    fn test_parse_invalid() {
+        assert_eq!(GpuDetector::parse_hsa_override("invalid"), None);
+    }
     #[test]
-    fn test_parse_empty() { assert_eq!(GpuDetector::parse_hsa_override(""), None); }
+    fn test_parse_empty() {
+        assert_eq!(GpuDetector::parse_hsa_override(""), None);
+    }
 }

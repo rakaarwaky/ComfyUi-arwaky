@@ -1,14 +1,14 @@
 // PURPOSE: downloader-tui — surface: TUI rendering (Ratatui)
 
+use crate::surface_tui_state::{App, AppState, InputMode};
+use downloader_file_utils::capabilities_file_checker::format_size;
+use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
-use downloader_file_utils::capabilities_file_checker::format_size;
-use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
-use crate::surface_tui_state::{App, AppState, InputMode};
 
 pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     let size = f.size();
@@ -95,10 +95,7 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             }
         }
     };
-    let active_label = format!(
-        "  Active Page: {} ({active_name})",
-        app.active_tab
-    );
+    let active_label = format!("  Active Page: {} ({active_name})", app.active_tab);
 
     let tab_paragraph = Paragraph::new(vec![
         Line::from(tab_spans),
@@ -130,7 +127,9 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             let dest_dir = app.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
             let exists = downloader_file_utils::capabilities_file_checker::file_exists_valid(
-                &dest_path, m.size_bytes, Some(&m.url),
+                &dest_path,
+                m.size_bytes,
+                Some(&m.url),
             );
 
             let prefix = if app.selected_indices.contains(orig_idx) {
@@ -163,7 +162,11 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 Span::raw(prefix),
                 Span::styled(
                     format!("{:<45}", format!("{}/{}", m.category, m.filename)),
-                    Style::default().fg(if exists { Color::DarkGray } else { Color::White }),
+                    Style::default().fg(if exists {
+                        Color::DarkGray
+                    } else {
+                        Color::White
+                    }),
                 ),
                 Span::raw(format!(" {:>10}  ", format_size(size))),
                 status_span,
@@ -199,7 +202,9 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             let dest_dir = app.config.resolve_category_dir(&m.category);
             let dest_path = dest_dir.join(&m.filename);
             let exists = downloader_file_utils::capabilities_file_checker::file_exists_valid(
-                &dest_path, m.size_bytes, Some(&m.url),
+                &dest_path,
+                m.size_bytes,
+                Some(&m.url),
             );
 
             let size = if m.size_bytes > 0 {
@@ -237,16 +242,29 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
     f.render_widget(details_paragraph, right_rects[0]);
 
     if app.rx.is_some() {
-        let remaining = app.total_to_download.saturating_sub(app.completed_count + app.failed_count);
+        let remaining = app
+            .total_to_download
+            .saturating_sub(app.completed_count + app.failed_count);
 
         let mut progress_lines = vec![
             Line::from(vec![
                 Span::styled("Tasks Remain: ", Style::default().fg(Color::Gray)),
-                Span::styled(format!("{remaining}"), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{remaining}"),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("  Done: ", Style::default().fg(Color::Gray)),
-                Span::styled(format!("{}", app.completed_count), Style::default().fg(Color::Green)),
+                Span::styled(
+                    format!("{}", app.completed_count),
+                    Style::default().fg(Color::Green),
+                ),
                 Span::styled("  Fail: ", Style::default().fg(Color::Gray)),
-                Span::styled(format!("{}", app.failed_count), Style::default().fg(Color::Red)),
+                Span::styled(
+                    format!("{}", app.failed_count),
+                    Style::default().fg(Color::Red),
+                ),
             ]),
             Line::from(""),
         ];
@@ -266,23 +284,42 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                     dl.filename.clone()
                 };
 
-                let bar_width = (right_rects[1].width as usize).saturating_sub(15).clamp(10, 20);
+                let bar_width = (right_rects[1].width as usize)
+                    .saturating_sub(15)
+                    .clamp(10, 20);
                 let bar = draw_progress_bar(pct, bar_width as u16);
 
                 progress_lines.push(Line::from(vec![
-                    Span::styled(format!("W#{}: ", w_id + 1), Style::default().fg(Color::Cyan)),
-                    Span::styled(truncated_filename, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("W#{}: ", w_id + 1),
+                        Style::default().fg(Color::Cyan),
+                    ),
+                    Span::styled(
+                        truncated_filename,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                 ]));
                 progress_lines.push(Line::from(vec![
                     Span::raw(format!("  {bar}  ")),
-                    Span::styled(format!("{:.1}MB/s", dl.speed_mb_s), Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        format!("{:.1}MB/s", dl.speed_mb_s),
+                        Style::default().fg(Color::Yellow),
+                    ),
                 ]));
-                progress_lines.push(Line::from(vec![
-                    Span::raw(format!("  ETA: {}s | {}/{}", dl.eta_secs, format_size(dl.bytes_downloaded), format_size(dl.total_bytes))),
-                ]));
+                progress_lines.push(Line::from(vec![Span::raw(format!(
+                    "  ETA: {}s | {}/{}",
+                    dl.eta_secs,
+                    format_size(dl.bytes_downloaded),
+                    format_size(dl.total_bytes)
+                ))]));
             } else {
                 progress_lines.push(Line::from(vec![
-                    Span::styled(format!("W#{}: ", w_id + 1), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("W#{}: ", w_id + 1),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                     Span::styled("Idle / Waiting...", Style::default().fg(Color::DarkGray)),
                 ]));
                 progress_lines.push(Line::from(""));
@@ -305,13 +342,12 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
             ),
         ]));
 
-        let progress_paragraph = Paragraph::new(progress_lines)
-            .block(
-                Block::default()
-                    .title(" Download Progress ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Yellow)),
-            );
+        let progress_paragraph = Paragraph::new(progress_lines).block(
+            Block::default()
+                .title(" Download Progress ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow)),
+        );
         f.render_widget(progress_paragraph, right_rects[1]);
     } else {
         let guide_text = "RX6800XT 16GB VRAM Tips:\n\
@@ -379,17 +415,45 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 .add_modifier(Modifier::BOLD);
             let inactive_style = Style::default().fg(Color::Gray);
 
-            let dir_style = if active_field == 0 { active_style } else { inactive_style };
-            let token_style = if active_field == 1 { active_style } else { inactive_style };
-            let save_style = if active_field == 2 { active_style } else { inactive_style };
-            let cancel_style = if active_field == 3 { active_style } else { inactive_style };
+            let dir_style = if active_field == 0 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let token_style = if active_field == 1 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let save_style = if active_field == 2 {
+                active_style
+            } else {
+                inactive_style
+            };
+            let cancel_style = if active_field == 3 {
+                active_style
+            } else {
+                inactive_style
+            };
 
             let settings_spans = vec![
-                Line::from(vec![Span::styled("1. Models Download Directory:", dir_style)]),
-                Line::from(vec![Span::styled(format!("   > {models_dir_input} "), dir_style)]),
+                Line::from(vec![Span::styled(
+                    "1. Models Download Directory:",
+                    dir_style,
+                )]),
+                Line::from(vec![Span::styled(
+                    format!("   > {models_dir_input} "),
+                    dir_style,
+                )]),
                 Line::from(""),
-                Line::from(vec![Span::styled("2. HuggingFace Access Token (HF_TOKEN):", token_style)]),
-                Line::from(vec![Span::styled(format!("   > {hf_token_input} "), token_style)]),
+                Line::from(vec![Span::styled(
+                    "2. HuggingFace Access Token (HF_TOKEN):",
+                    token_style,
+                )]),
+                Line::from(vec![Span::styled(
+                    format!("   > {hf_token_input} "),
+                    token_style,
+                )]),
                 Line::from(""),
                 Line::from(""),
                 Line::from(vec![
@@ -415,7 +479,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 .wrap(Wrap { trim: true });
             f.render_widget(settings_paragraph, popup_rect);
         }
-        AppState::DiskSpaceWarning { required, available } => {
+        AppState::DiskSpaceWarning {
+            required,
+            available,
+        } => {
             let popup_rect = centered_rect(65, 30, size);
             f.render_widget(Clear, popup_rect);
 
@@ -433,7 +500,10 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 Line::from(""),
                 Line::from(vec![
                     Span::raw("   "),
-                    Span::styled("  [ PROCEED ]  ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  [ PROCEED ]  ",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw("      "),
                     Span::styled("  [ CANCEL ]  ", Style::default().fg(Color::Gray)),
                 ]),
@@ -449,14 +519,20 @@ pub fn draw_ui(f: &mut ratatui::Frame, app: &mut App) {
                 .wrap(Wrap { trim: true });
             f.render_widget(warning_paragraph, popup_rect);
         }
-        AppState::Finished { completed, failed, ref message } => {
+        AppState::Finished {
+            completed,
+            failed,
+            ref message,
+        } => {
             let popup_rect = centered_rect(50, 20, size);
             f.render_widget(Clear, popup_rect);
 
             let finished_spans = vec![
                 Line::from(Span::styled(
                     message.clone(),
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(""),
                 Line::from(format!("Completed successfully: {completed}")),

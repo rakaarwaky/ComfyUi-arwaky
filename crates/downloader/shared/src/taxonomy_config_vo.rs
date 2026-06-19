@@ -20,8 +20,7 @@ impl Config {
             base.join(category)
         };
         // Prevent path traversal: resolved path must stay under models_dir
-        if let (Ok(canon_base), Ok(canon_resolved)) =
-            (base.canonicalize(), resolved.canonicalize())
+        if let (Ok(canon_base), Ok(canon_resolved)) = (base.canonicalize(), resolved.canonicalize())
         {
             if !canon_resolved.starts_with(&canon_base) {
                 // Fallback: ignore paths entry, use category name directly

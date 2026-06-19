@@ -2,11 +2,11 @@
 
 use std::sync::atomic::AtomicBool;
 
-use crate::taxonomy_install_dir_vo::InstallDir;
 use crate::taxonomy_archive_url_vo::ArchiveUrl;
-use crate::taxonomy_sha256_vo::Sha256Hash;
 use crate::taxonomy_backend_install_error_vo::BackendInstallError;
 use crate::taxonomy_backend_install_event_vo::BackendInstallEvent;
+use crate::taxonomy_install_dir_vo::InstallDir;
+use crate::taxonomy_sha256_vo::Sha256Hash;
 
 pub trait BackendInstallProtocol: Send + Sync {
     fn is_installed(&self, install_dir: &InstallDir) -> bool;

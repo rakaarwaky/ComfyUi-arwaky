@@ -9,10 +9,10 @@ use std::time::Duration;
 
 use downloader_shared::contract_cache_port::CachePort;
 use downloader_shared::contract_config_port::ConfigPort;
+use downloader_shared::contract_download_protocol::DownloadProtocol;
 use downloader_shared::contract_downloader_aggregate::DownloaderAggregate;
 use downloader_shared::contract_file_port::FileValidationPort;
 use downloader_shared::contract_file_protocol::FileValidationProtocol;
-use downloader_shared::contract_download_protocol::DownloadProtocol;
 use downloader_shared::taxonomy_config_vo::Config;
 use downloader_shared::taxonomy_download_event_vo::DownloadEvent;
 use downloader_shared::taxonomy_model_vo::Model;
@@ -26,9 +26,13 @@ pub struct DownloaderOrchestrator {
 }
 
 impl DownloaderAggregate for DownloaderOrchestrator {
-    fn get_models(&self) -> Vec<Model> { Vec::new() }
+    fn get_models(&self) -> Vec<Model> {
+        Vec::new()
+    }
 
-    fn get_config(&self) -> Config { self.config_port.load() }
+    fn get_config(&self) -> Config {
+        self.config_port.load()
+    }
 
     fn file_exists_valid(&self, path: &Path, expected: u64, url: Option<&str>) -> bool {
         self.file_port.file_exists_valid(path, expected, url)
@@ -42,14 +46,19 @@ impl DownloaderAggregate for DownloaderOrchestrator {
         self.cache_port.set_size(url, size);
     }
 
-    fn save_cache(&self) { self.cache_port.save(); }
+    fn save_cache(&self) {
+        self.cache_port.save();
+    }
 
     fn get_available_space(&self, path: &Path) -> u64 {
         self.file_port.get_available_space(path).unwrap_or(u64::MAX)
     }
 
     fn start_download_coordinator(
-        &self, selected: Vec<(usize, Model)>, config: Config, cancel: Arc<AtomicBool>,
+        &self,
+        selected: Vec<(usize, Model)>,
+        config: Config,
+        cancel: Arc<AtomicBool>,
     ) -> Receiver<DownloadEvent> {
         let (tx, rx) = channel();
         let sorted = sort_by_size(selected, &*self.cache_port);
@@ -57,7 +66,9 @@ impl DownloaderAggregate for DownloaderOrchestrator {
         let dl = self.download_protocol.clone();
         let file_p = self.file_port.clone();
         let cache = self.cache_port.clone();
-        std::thread::spawn(move || coordinator_thread(sorted, config, cancel, tx, dl, file_p, cache));
+        std::thread::spawn(move || {
+            coordinator_thread(sorted, config, cancel, tx, dl, file_p, cache)
+        });
         rx
     }
 
@@ -88,7 +99,10 @@ impl DownloaderAggregate for DownloaderOrchestrator {
                 let tk = Arc::clone(&token);
                 let ag = agent.clone();
                 handles.push(std::thread::spawn(move || loop {
-                    let item = { let mut l = q.lock().expect("mutex poisoned"); l.pop() };
+                    let item = {
+                        let mut l = q.lock().expect("mutex poisoned");
+                        l.pop()
+                    };
                     let Some((_idx, m)) = item else { break };
                     let mut req = ag.head(&m.url).header("User-Agent", "Mozilla/5.0");
                     if let Some(ref t) = *tk {

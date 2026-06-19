@@ -25,7 +25,12 @@ impl DownloadPort for HttpDownloadAdapter {
             .map_err(|e| e.to_string())?;
         let sc = resp.status().as_u16();
         if sc != 200 && sc != 206 {
-            return Err(match sc { 401 => "Unauthorized".into(), 403 => "Forbidden".into(), 404 => "Not Found".into(), _ => format!("HTTP {sc}") });
+            return Err(match sc {
+                401 => "Unauthorized".into(),
+                403 => "Forbidden".into(),
+                404 => "Not Found".into(),
+                _ => format!("HTTP {sc}"),
+            });
         }
         let mut reader = resp.into_body().into_reader();
         let mut file = fs::File::create(dest).map_err(|e| e.to_string())?;
@@ -45,22 +50,39 @@ pub struct ChunkProgress {
 /// Multi-threaded chunked download (range requests).
 #[allow(clippy::too_many_arguments)]
 pub fn parallel_download(
-    _worker_id: usize, model: &Model, _config: &Config, cancel_token: &Arc<AtomicBool>,
-    _tx: &Sender<DownloadEvent>, temp_path: &Path, total_size: u64,
-    _agent: &ureq::Agent, token: &Option<String>,
+    _worker_id: usize,
+    model: &Model,
+    _config: &Config,
+    cancel_token: &Arc<AtomicBool>,
+    _tx: &Sender<DownloadEvent>,
+    temp_path: &Path,
+    total_size: u64,
+    _agent: &ureq::Agent,
+    token: &Option<String>,
 ) -> Result<(), String> {
-    let n_chunks: usize = if total_size < 50 * 1024 * 1024 { 1 }
-        else if total_size < 200 * 1024 * 1024 { 2 }
-        else if total_size < 1024 * 1024 * 1024 { 4 }
-        else { 8 };
+    let n_chunks: usize = if total_size < 50 * 1024 * 1024 {
+        1
+    } else if total_size < 200 * 1024 * 1024 {
+        2
+    } else if total_size < 1024 * 1024 * 1024 {
+        4
+    } else {
+        8
+    };
 
     let progress_path = temp_path.with_extension("progress");
     let chunk_size = total_size / n_chunks as u64;
-    let chunks: Vec<(u64, u64)> = (0..n_chunks).map(|i| {
-        let start = i as u64 * chunk_size;
-        let end = if i == n_chunks - 1 { total_size - 1 } else { (i as u64 + 1) * chunk_size - 1 };
-        (start, end)
-    }).collect();
+    let chunks: Vec<(u64, u64)> = (0..n_chunks)
+        .map(|i| {
+            let start = i as u64 * chunk_size;
+            let end = if i == n_chunks - 1 {
+                total_size - 1
+            } else {
+                (i as u64 + 1) * chunk_size - 1
+            };
+            (start, end)
+        })
+        .collect();
 
     let mut chunk_offsets = vec![0u64; n_chunks];
     // Resume from progress file
@@ -74,7 +96,11 @@ pub fn parallel_download(
         }
     }
 
-    let file = fs::OpenOptions::new().write(true).create(true).truncate(true).open(temp_path)
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(temp_path)
         .map_err(|e| e.to_string())?;
     file.set_len(total_size).map_err(|e| e.to_string())?;
     let shared_file = Arc::new(file);
@@ -83,13 +109,16 @@ pub fn parallel_download(
         ureq::config::Config::builder()
             .timeout_connect(Some(Duration::from_secs(15)))
             .timeout_recv_body(Some(Duration::from_secs(120)))
-            .timeout_global(Some(Duration::from_secs(3600))).build(),
+            .timeout_global(Some(Duration::from_secs(3600)))
+            .build(),
     ));
 
     let mut handles = Vec::new();
     for (i, &(start, end)) in chunks.iter().enumerate() {
         let start_pos = start + chunk_offsets[i];
-        if start_pos > end { continue; }
+        if start_pos > end {
+            continue;
+        }
         let f = Arc::clone(&shared_file);
         let a = Arc::clone(&shared_agent);
         let te = Arc::clone(&thread_errors);
@@ -101,21 +130,30 @@ pub fn parallel_download(
 
         handles.push(std::thread::spawn(move || {
             let res = (|| -> Result<(), String> {
-                let mut req = a.get(&u).header("User-Agent", "Mozilla/5.0")
+                let mut req = a
+                    .get(&u)
+                    .header("User-Agent", "Mozilla/5.0")
                     .header("Range", &format!("bytes={start_pos}-{end}"));
-                if let Some(ref t) = tk { req = req.header("Authorization", &format!("Bearer {t}")); }
+                if let Some(ref t) = tk {
+                    req = req.header("Authorization", &format!("Bearer {t}"));
+                }
                 let resp = req.call().map_err(|e| e.to_string())?;
                 let sc = resp.status().as_u16();
-                if sc != 200 && sc != 206 { return Err(format!("HTTP {sc}")); }
+                if sc != 200 && sc != 206 {
+                    return Err(format!("HTTP {sc}"));
+                }
                 let mut reader = resp.into_body().into_reader();
                 let mut buf = vec![0u8; 256 * 1024];
                 let mut dl = 0u64;
                 loop {
-                    if ct.load(Ordering::Acquire) { return Err("Cancelled".into()); }
+                    if ct.load(Ordering::Acquire) {
+                        return Err("Cancelled".into());
+                    }
                     match reader.read(&mut buf) {
                         Ok(0) => break,
                         Ok(n) => {
-                            f.write_all_at(&buf[..n], start_pos + dl).map_err(|e| e.to_string())?;
+                            f.write_all_at(&buf[..n], start_pos + dl)
+                                .map_err(|e| e.to_string())?;
                             dl += n as u64;
                             atomic.store(initial + dl, Ordering::Release);
                         }
@@ -124,7 +162,9 @@ pub fn parallel_download(
                 }
                 Ok(())
             })();
-            if let Err(e) = res { te.lock().expect("mutex poisoned").push(e); }
+            if let Err(e) = res {
+                te.lock().expect("mutex poisoned").push(e);
+            }
         }));
     }
 
@@ -134,14 +174,27 @@ pub fn parallel_download(
     let _last_progress_instant = Instant::now();
 
     loop {
-        if cancel_token.load(Ordering::Acquire) { return Err("Cancelled".into()); }
-        if start_time.elapsed() > Duration::from_secs(3600) { return Err("Timeout".into()); }
-        { let e = thread_errors.lock().expect("mutex poisoned"); if !e.is_empty() { return Err(e[0].clone()); } }
-        if handles.iter().all(|h| h.is_finished()) { break; }
+        if cancel_token.load(Ordering::Acquire) {
+            return Err("Cancelled".into());
+        }
+        if start_time.elapsed() > Duration::from_secs(3600) {
+            return Err("Timeout".into());
+        }
+        {
+            let e = thread_errors.lock().expect("mutex poisoned");
+            if !e.is_empty() {
+                return Err(e[0].clone());
+            }
+        }
+        if handles.iter().all(|h| h.is_finished()) {
+            break;
+        }
         // Progress tracking simplified
         std::thread::sleep(Duration::from_millis(50));
     }
-    for h in handles { let _ = h.join(); }
+    for h in handles {
+        let _ = h.join();
+    }
     let _ = fs::remove_file(&progress_path);
     Ok(())
 }
@@ -149,27 +202,58 @@ pub fn parallel_download(
 /// Single-threaded download fallback.
 #[allow(clippy::too_many_arguments)]
 pub fn single_download(
-    worker_id: usize, model: &Model, token: &Option<String>, cancel_token: &Arc<AtomicBool>,
-    tx: &Sender<DownloadEvent>, temp_path: &Path, agent: &ureq::Agent, total_size: u64,
+    worker_id: usize,
+    model: &Model,
+    token: &Option<String>,
+    cancel_token: &Arc<AtomicBool>,
+    tx: &Sender<DownloadEvent>,
+    temp_path: &Path,
+    agent: &ureq::Agent,
+    total_size: u64,
 ) -> Result<(), String> {
     let current_size = fs::metadata(temp_path).map(|m| m.len()).unwrap_or(0);
     let mut req = agent.get(&model.url).header("User-Agent", "Mozilla/5.0");
-    if let Some(ref t) = token { req = req.header("Authorization", &format!("Bearer {t}")); }
-    if current_size > 0 { req = req.header("Range", &format!("bytes={current_size}-")); }
+    if let Some(ref t) = token {
+        req = req.header("Authorization", &format!("Bearer {t}"));
+    }
+    if current_size > 0 {
+        req = req.header("Range", &format!("bytes={current_size}-"));
+    }
 
     let resp = req.call().map_err(|e| e.to_string())?;
     let sc = resp.status().as_u16();
     if sc != 200 && sc != 206 {
-        return Err(match sc { 401 => "Unauthorized".into(), 403 => "Forbidden".into(), 404 => "Not Found".into(), _ => format!("HTTP {sc}") });
+        return Err(match sc {
+            401 => "Unauthorized".into(),
+            403 => "Forbidden".into(),
+            404 => "Not Found".into(),
+            _ => format!("HTTP {sc}"),
+        });
     }
     let is_partial = sc == 206;
-    let response_len: u64 = resp.headers().get("Content-Length")
-        .and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()).unwrap_or(0);
-    let total = if is_partial { current_size + response_len }
-        else if response_len > 0 { response_len } else { total_size };
+    let response_len: u64 = resp
+        .headers()
+        .get("Content-Length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    let total = if is_partial {
+        current_size + response_len
+    } else if response_len > 0 {
+        response_len
+    } else {
+        total_size
+    };
 
-    let file = if is_partial { fs::OpenOptions::new().append(true).open(temp_path) }
-        else { fs::OpenOptions::new().write(true).create(true).truncate(true).open(temp_path) };
+    let file = if is_partial {
+        fs::OpenOptions::new().append(true).open(temp_path)
+    } else {
+        fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(temp_path)
+    };
     let file = file.map_err(|e| e.to_string())?;
     let mut writer = std::io::BufWriter::new(file);
     let mut reader = resp.into_body().into_reader();
@@ -179,8 +263,12 @@ pub fn single_download(
     let mut last_report = Instant::now();
 
     loop {
-        if cancel_token.load(Ordering::Acquire) { return Err("Cancelled".into()); }
-        if start_time.elapsed() > Duration::from_secs(3600) { return Err("Timeout".into()); }
+        if cancel_token.load(Ordering::Acquire) {
+            return Err("Cancelled".into());
+        }
+        if start_time.elapsed() > Duration::from_secs(3600) {
+            return Err("Timeout".into());
+        }
         match reader.read(&mut buf) {
             Ok(0) => break,
             Ok(n) => {
@@ -189,12 +277,26 @@ pub fn single_download(
                 if last_report.elapsed() >= Duration::from_millis(200) {
                     let elapsed = start_time.elapsed().as_secs_f64();
                     let speed = if elapsed > 0.0 {
-                        (downloaded.saturating_sub(if is_partial { current_size } else { 0 })) as f64 / (1024.0 * 1024.0) / elapsed
-                    } else { 0.0 };
-                    let eta = if speed > 0.0 { ((total.saturating_sub(downloaded)) as f64 / (1024.0 * 1024.0) / speed) as u64 } else { 0 };
+                        (downloaded.saturating_sub(if is_partial { current_size } else { 0 }))
+                            as f64
+                            / (1024.0 * 1024.0)
+                            / elapsed
+                    } else {
+                        0.0
+                    };
+                    let eta = if speed > 0.0 {
+                        ((total.saturating_sub(downloaded)) as f64 / (1024.0 * 1024.0) / speed)
+                            as u64
+                    } else {
+                        0
+                    };
                     let _ = tx.send(DownloadEvent::Progress {
-                        worker_id, filename: model.filename.clone(),
-                        downloaded, total, speed_mb_s: speed, eta_secs: eta,
+                        worker_id,
+                        filename: model.filename.clone(),
+                        downloaded,
+                        total,
+                        speed_mb_s: speed,
+                        eta_secs: eta,
                     });
                     last_report = Instant::now();
                 }

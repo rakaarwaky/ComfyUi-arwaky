@@ -15,9 +15,9 @@ use downloader_config::load_config;
 use downloader_file_utils::capabilities_file_checker::file_exists_valid;
 use downloader_file_utils::infrastructure_cache_adapter::SIZE_CACHE;
 
-use crate::surface_tui_state::App;
 use crate::surface_tui_draw::draw_ui;
 use crate::surface_tui_event::handle_event;
+use crate::surface_tui_state::App;
 
 use downloader_shared::taxonomy_model_vo::Model;
 
@@ -48,7 +48,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 // Skip models that already exist on disk with valid size
                 let dest_dir = config.resolve_category_dir(&m.category);
                 let dest_path = dest_dir.join(&m.filename);
-                if dest_path.is_file() && file_exists_valid(&dest_path, m.size_bytes, Some(&m.url)) {
+                if dest_path.is_file() && file_exists_valid(&dest_path, m.size_bytes, Some(&m.url))
+                {
                     continue;
                 }
                 // HEAD probe to check URL + get size
@@ -61,7 +62,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(res) => {
                         let status = res.status().as_u16();
                         if status == 200 || status == 206 {
-                            if let Some(len) = res.headers().get("Content-Length")
+                            if let Some(len) = res
+                                .headers()
+                                .get("Content-Length")
                                 .and_then(|v| v.to_str().ok())
                                 .and_then(|v| v.parse::<u64>().ok())
                             {
@@ -79,7 +82,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => {} // transport errors — skip, try again later
                 }
             }
-            if let Ok(cache) = SIZE_CACHE.write() { cache.save(); }
+            if let Ok(cache) = SIZE_CACHE.write() {
+                cache.save();
+            }
         });
     }
 
@@ -97,17 +102,27 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         app.update_downloads();
         terminal.draw(|f| draw_ui(f, &mut app))?;
-        let timeout = tick_rate.checked_sub(last_tick.elapsed()).unwrap_or_else(|| Duration::from_secs(0));
+        let timeout = tick_rate
+            .checked_sub(last_tick.elapsed())
+            .unwrap_or_else(|| Duration::from_secs(0));
         if poll(timeout)? {
             let crossterm_event = read()?;
             let should_continue = handle_event(&mut app, &mut terminal, crossterm_event)?;
-            if !should_continue { break; }
+            if !should_continue {
+                break;
+            }
         }
-        if last_tick.elapsed() >= tick_rate { last_tick = Instant::now(); }
+        if last_tick.elapsed() >= tick_rate {
+            last_tick = Instant::now();
+        }
     }
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
     Ok(())
 }

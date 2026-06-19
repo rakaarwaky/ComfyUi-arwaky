@@ -26,10 +26,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn display_not_found() { assert_eq!(ConfigError::NotFound("cfg".into()).to_string(), "Config not found at: cfg"); }
+    fn display_not_found() {
+        assert_eq!(
+            ConfigError::NotFound("cfg".into()).to_string(),
+            "Config not found at: cfg"
+        );
+    }
     #[test]
-    fn display_parse_failed() { assert_eq!(ConfigError::ParseFailed("bad".into()).to_string(), "Config parse failed: bad"); }
+    fn display_parse_failed() {
+        assert_eq!(
+            ConfigError::ParseFailed("bad".into()).to_string(),
+            "Config parse failed: bad"
+        );
+    }
     #[test]
-    fn display_create_failed() { assert_eq!(ConfigError::CreateFailed("perm".into()).to_string(), "Config create failed: perm"); }
+    fn display_create_failed() {
+        assert_eq!(
+            ConfigError::CreateFailed("perm".into()).to_string(),
+            "Config create failed: perm"
+        );
+    }
 }
-
