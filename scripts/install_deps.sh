@@ -98,7 +98,7 @@ if [ -d "$FRONTEND_DIR" ]; then
     
     # Check if pnpm is available
     if command -v pnpm &>/dev/null; then
-        pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+        pnpm install --frozen-lockfile 2>/dev/null || pnpm install --ignore-engines
         echo "  Building frontend..."
         pnpm build
         echo "  ✅ Frontend built successfully."
