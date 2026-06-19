@@ -106,6 +106,9 @@ pub fn configure_app(
             app.manage::<Arc<dyn LauncherAggregate>>(agg);
 
             let app_handle_writer = app_handle.clone();
+            let file_writer =
+                launcher_log_engine::FileLogWriter::new(&config_dir);
+            let file_writer_ref = file_writer.clone();
             let writer_handle = std::thread::spawn(move || {
                 let log_buffer = app_handle_writer.state::<LogBuffer>();
                 let redirect_state = app_handle_writer.state::<RedirectionState>();
@@ -117,13 +120,6 @@ pub fn configure_app(
                         launcher_log_engine::BATCH_FLUSH_INTERVAL_MS,
                     )) {
                         Ok(msg) => {
-                            let is_redirected = redirect_state
-                                .is_redirected
-                                .load(std::sync::atomic::Ordering::Acquire);
-                            if is_redirected {
-                                continue;
-                            }
-
                             let (formatted, _is_stderr) = match msg {
                                 LogMessage::Stdout(ref line) => {
                                     (format!("[stdout] {}", line), false)
@@ -135,6 +131,16 @@ pub fn configure_app(
                                     (format!("[Launcher] {}", line), false)
                                 }
                             };
+
+                            // Always write to file (even after redirect)
+                            file_writer_ref.write_log(&formatted);
+
+                            let is_redirected = redirect_state
+                                .is_redirected
+                                .load(std::sync::atomic::Ordering::Acquire);
+                            if is_redirected {
+                                continue;
+                            }
 
                             #[cfg(debug_assertions)]
                             if _is_stderr {

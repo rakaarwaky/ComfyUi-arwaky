@@ -90,6 +90,15 @@ else
     echo "  ✅ ComfyUI-Manager config created with network_mode=offline"
 fi
 
+# Copy Desktop Logs extension to ComfyUI custom_nodes
+EXTENSIONS_SRC="$ROOT_DIR/extensions"
+EXTENSIONS_DST="$ROOT_DIR/ComfyUI/custom_nodes"
+if [ -d "$EXTENSIONS_SRC/ComfyUI-Desktop-Logs" ]; then
+    echo "  Copying ComfyUI-Desktop-Logs extension..."
+    cp -r "$EXTENSIONS_SRC/ComfyUI-Desktop-Logs" "$EXTENSIONS_DST/"
+    echo "  ✅ Desktop Logs extension installed."
+fi
+
 echo ""
 echo "✅ ComfyUI-Manager setup complete."
 
