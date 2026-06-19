@@ -5,6 +5,12 @@
 # ==============================================================================
 set -e
 
+# Load nvm if available (for Node.js version management)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm use 26 2>/dev/null || true
+export PATH="$NVM_DIR/versions/node/v26.3.1/bin:$PATH"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="$ROOT_DIR/venv"
 REQ_FILE="$ROOT_DIR/requirements.txt"
