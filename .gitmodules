@@ -4,4 +4,4 @@
 	ignore = dirty
 [submodule "ComfyUI_frontend"]
 	path = ComfyUI_frontend
-	url = https://github.com/Comfy-Org/ComfyUI_frontend.git
+	url = https://github.com/rakaarwaky/ComfyUI_frontend.git
