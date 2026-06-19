@@ -51,7 +51,7 @@ impl std::fmt::Display for GpuMetrics {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::GpuMetrics;
 
     #[test]
     fn unknown_defaults() {

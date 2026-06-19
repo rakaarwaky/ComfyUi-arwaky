@@ -38,18 +38,14 @@ impl std::fmt::Display for HealthState {
         write!(
             f,
             "Backend:{} uptime={}s logs={}/{} GPU:{}",
-            status,
-            self.uptime_secs,
-            self.logs_received,
-            self.logs_dropped,
-            self.gpu,
+            status, self.uptime_secs, self.logs_received, self.logs_dropped, self.gpu,
         )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::HealthState;
 
     #[test]
     fn new_health_is_down() {

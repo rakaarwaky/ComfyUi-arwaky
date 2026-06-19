@@ -10,6 +10,7 @@ Endpoints:
   GET /logs/stats           → file size + line count
 """
 
+import asyncio
 import os
 import json
 import time
@@ -35,7 +36,7 @@ def _find_log_file() -> Path | None:
 
 
 def _read_tail(path: Path, n: int = 200) -> list[dict]:
-    """Read last n lines from log file, return as list of {id, text, ts}."""
+    """Read last n lines from log file, return as list of {id, text}."""
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
@@ -121,8 +122,6 @@ async def handle_stats(request):
 
 
 # Register routes
-import asyncio
-
 routes = [
     web.get("/logs/latest", handle_latest),
     web.get("/logs/stream", handle_stream),

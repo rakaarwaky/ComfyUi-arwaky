@@ -144,7 +144,7 @@ impl ProcessPort for ProcessSpawner {
             std::thread::spawn(move || {
                 let reader = BufReader::new(stdout);
                 for l in reader.lines().map_while(Result::ok) {
-                    if tx.send(LogMessage::Stdout(l)).is_err() {
+                    if tx.try_send(LogMessage::stdout(l)).is_err() {
                         break;
                     }
                 }
@@ -157,7 +157,7 @@ impl ProcessPort for ProcessSpawner {
             std::thread::spawn(move || {
                 let reader = BufReader::new(stderr);
                 for l in reader.lines().map_while(Result::ok) {
-                    if tx_stderr.send(LogMessage::Stderr(l)).is_err() {
+                    if tx_stderr.try_send(LogMessage::stderr(l)).is_err() {
                         break;
                     }
                 }

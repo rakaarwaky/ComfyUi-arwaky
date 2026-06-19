@@ -1,14 +1,14 @@
 // PURPOSE: log-engine — logging free functions + surface commands for log polling.
 
-mod file_log_writer;
+mod infrastructure_file_log_writer;
 mod infrastructure_gpu_monitor_adapter;
-mod surface_log_commands;
-mod surface_log_writer;
+mod infrastructure_log_writer;
+mod surface_log_command;
 
-pub use file_log_writer::*;
-pub use infrastructure_gpu_monitor_adapter::*;
-pub use surface_log_commands::*;
-pub use surface_log_writer::*;
+pub use infrastructure_file_log_writer::FileLogWriter;
+pub use infrastructure_gpu_monitor_adapter::{GpuMetricsAtomic, GpuMonitorAdapter};
+pub use infrastructure_log_writer::LogEmitter;
+pub use surface_log_command::{get_gpu_metrics, get_health, get_log_stats, get_logs};
 
 // ── Constants ──
 

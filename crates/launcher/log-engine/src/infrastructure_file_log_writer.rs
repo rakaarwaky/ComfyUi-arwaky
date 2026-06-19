@@ -5,6 +5,8 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use launcher_shared::contract_log_writer_port::LogWriterPort;
+
 const MAX_LOG_FILE_SIZE: u64 = 5 * 1024 * 1024; // 5MB
 const LOG_FILE_NAME: &str = "comfyui-backend.log";
 
@@ -39,7 +41,27 @@ impl FileLogWriter {
         })
     }
 
-    pub fn write_log(&self, formatted: &str) {
+    fn rotate(&self) {
+        let mut guard = match self.writer.lock() {
+            Ok(g) => g,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+
+        // Truncate and reopen
+        if let Ok(file) = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&self.path)
+        {
+            *guard = Some(BufWriter::new(file));
+            self.size.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+}
+
+impl LogWriterPort for FileLogWriter {
+    fn write_log(&self, formatted: &str) {
         let mut guard = match self.writer.lock() {
             Ok(g) => g,
             Err(poisoned) => poisoned.into_inner(),
@@ -63,26 +85,7 @@ impl FileLogWriter {
         }
     }
 
-    fn rotate(&self) {
-        let mut guard = match self.writer.lock() {
-            Ok(g) => g,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-
-        // Truncate and reopen
-        if let Ok(file) = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&self.path)
-        {
-            *guard = Some(BufWriter::new(file));
-            self.size
-                .store(0, std::sync::atomic::Ordering::Relaxed);
-        }
-    }
-
-    pub fn path(&self) -> &Path {
+    fn log_path(&self) -> &Path {
         &self.path
     }
 }

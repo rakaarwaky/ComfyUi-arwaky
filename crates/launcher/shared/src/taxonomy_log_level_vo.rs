@@ -23,7 +23,7 @@ impl std::fmt::Display for LogLevel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::LogLevel;
 
     #[test]
     fn display_all_levels() {

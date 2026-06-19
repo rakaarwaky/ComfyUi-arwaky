@@ -2,6 +2,7 @@
 // builds the orchestrator, and configures the Tauri app. This is the ONLY place that
 // imports both contracts (from shared) and concrete implementations (from feature crates).
 
+use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -11,14 +12,17 @@ use tauri::{Emitter, Manager};
 use launcher_shared::contract_backend_install_protocol::BackendInstallProtocol;
 use launcher_shared::contract_config_port::ConfigPort;
 use launcher_shared::contract_gpu_detection_protocol::GpuDetectionProtocol;
+use launcher_shared::contract_gpu_monitor_port::GpuMonitorPort;
 use launcher_shared::contract_launcher_aggregate::LauncherAggregate;
-use launcher_shared::BackendStatus;
+use launcher_shared::contract_log_emitter_port::LogEmitterPort;
+use launcher_shared::contract_log_writer_port::LogWriterPort;
+use launcher_shared::{BackendStatus, LogSource};
 
 use launcher_backend_engine::BackendInstaller;
 use launcher_config::ConfigLoader;
 use launcher_engine::LauncherOrchestrator;
 use launcher_gpu_detector::GpuDetector;
-use launcher_log_engine::flush_batch;
+use launcher_log_engine::LogEmitter;
 use launcher_process_manager::ProcessSpawner;
 use launcher_shared::{
     ComfyUiState, InstallDir, LogBuffer, LogMessage, LogSender, LogStats, RedirectionState,
@@ -47,11 +51,31 @@ fn build_aggregate(config_dir: std::path::PathBuf) -> Arc<dyn LauncherAggregate>
     ))
 }
 
+/// Flush a batch of log messages to the Tauri frontend, grouped by event name.
+fn flush_batch(app_handle: &tauri::AppHandle, batch: &mut Vec<(&'static str, String)>) {
+    if batch.is_empty() {
+        return;
+    }
+    let mut grouped: HashMap<&'static str, Vec<String>> = HashMap::new();
+    for (event, msg) in batch.drain(..) {
+        grouped.entry(event).or_default().push(msg);
+    }
+    for (event, messages) in grouped {
+        let _ = app_handle.emit(event, messages);
+    }
+}
+
 /// Configure the Tauri app with all managed state, invoke handlers, and setup.
 pub fn configure_app(
     log_tx: std::sync::mpsc::SyncSender<LogMessage>,
     log_rx: std::sync::mpsc::Receiver<LogMessage>,
 ) -> tauri::Builder<tauri::Wry> {
+    let (gpu_adapter, _gpu_metrics) = launcher_log_engine::GpuMonitorAdapter::new();
+    gpu_adapter.start_polling();
+    let gpu_port: Box<dyn GpuMonitorPort> = Box::new(gpu_adapter);
+
+    let log_emitter = Arc::new(LogEmitter::new(log_tx.clone()));
+
     tauri::Builder::default()
         .manage(ComfyUiState {
             child: Mutex::new(None),
@@ -80,9 +104,14 @@ pub fn configure_app(
             cancel_token: Mutex::new(None),
             is_downloading: AtomicBool::new(false),
         })
+        .manage(gpu_port)
+        .manage(log_emitter)
+        .manage(launcher_log_engine::StartTime(std::time::Instant::now()))
         .invoke_handler(tauri::generate_handler![
             launcher_log_engine::get_logs,
             launcher_log_engine::get_log_stats,
+            launcher_log_engine::get_health,
+            launcher_log_engine::get_gpu_metrics,
             crate::check_backend_status,
             crate::start_backend_download,
             crate::cancel_backend_download,
@@ -106,8 +135,7 @@ pub fn configure_app(
             app.manage::<Arc<dyn LauncherAggregate>>(agg);
 
             let app_handle_writer = app_handle.clone();
-            let file_writer =
-                launcher_log_engine::FileLogWriter::new(&config_dir);
+            let file_writer = launcher_log_engine::FileLogWriter::new(&config_dir);
             let file_writer_ref = file_writer.clone();
             let writer_handle = std::thread::spawn(move || {
                 let log_buffer = app_handle_writer.state::<LogBuffer>();
@@ -120,17 +148,8 @@ pub fn configure_app(
                         launcher_log_engine::BATCH_FLUSH_INTERVAL_MS,
                     )) {
                         Ok(msg) => {
-                            let (formatted, _is_stderr) = match msg {
-                                LogMessage::Stdout(ref line) => {
-                                    (format!("[stdout] {}", line), false)
-                                }
-                                LogMessage::Stderr(ref line) => {
-                                    (format!("[stderr] {}", line), true)
-                                }
-                                LogMessage::Launcher(ref line) => {
-                                    (format!("[Launcher] {}", line), false)
-                                }
-                            };
+                            let formatted = msg.to_string();
+                            let is_stderr = msg.source == LogSource::Stderr;
 
                             // Always write to file (even after redirect)
                             file_writer_ref.write_log(&formatted);
@@ -143,7 +162,7 @@ pub fn configure_app(
                             }
 
                             #[cfg(debug_assertions)]
-                            if _is_stderr {
+                            if is_stderr {
                                 eprintln!("{}", formatted);
                             } else {
                                 println!("{}", formatted);
@@ -162,10 +181,10 @@ pub fn configure_app(
                             logs.push_back((id, formatted.clone()));
                             drop(logs);
 
-                            let event_name: &'static str = match msg {
-                                LogMessage::Stdout(_) => "comfyui-log-stdout",
-                                LogMessage::Stderr(_) => "comfyui-log-stderr",
-                                LogMessage::Launcher(_) => "comfyui-log",
+                            let event_name: &'static str = match msg.source {
+                                LogSource::Stdout => "comfyui-log-stdout",
+                                LogSource::Stderr => "comfyui-log-stderr",
+                                LogSource::Launcher => "comfyui-log",
                             };
                             batch.push((event_name, formatted));
 
@@ -188,25 +207,21 @@ pub fn configure_app(
                 handles.push(writer_handle);
             }
 
-            launcher_log_engine::log_info(&app_handle, "Starting ComfyUI Desktop Launcher...");
+            // Log startup via LogEmitter port
+            let emitter = app_handle.state::<Arc<dyn LogEmitterPort>>();
+            emitter.log_info("Starting ComfyUI Desktop Launcher...");
 
             // Check backend status on startup
             let agg = app.state::<Arc<dyn LauncherAggregate>>();
             match agg.check_backend_status() {
                 BackendStatus::Installed { version } => {
-                    launcher_log_engine::log_info(
-                        &app_handle,
-                        &format!("Backend installed (version: {:?})", version),
-                    );
+                    emitter.log_info(&format!("Backend installed (version: {:?})", version));
                 }
                 BackendStatus::CustomInstall => {
-                    launcher_log_engine::log_info(&app_handle, "Backend: custom install detected");
+                    emitter.log_info("Backend: custom install detected");
                 }
                 BackendStatus::NotInstalled => {
-                    launcher_log_engine::log_info(
-                        &app_handle,
-                        "Backend not installed. Waiting for frontend trigger...",
-                    );
+                    emitter.log_info("Backend not installed. Waiting for frontend trigger...");
                     let _ = app_handle.emit("comfyui-download-start", ());
                 }
             }

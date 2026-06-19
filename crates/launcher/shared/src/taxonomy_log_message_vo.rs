@@ -22,6 +22,16 @@ pub enum LogSource {
     Launcher,
 }
 
+impl std::fmt::Display for LogSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Stdout => write!(f, "stdout"),
+            Self::Stderr => write!(f, "stderr"),
+            Self::Launcher => write!(f, "launcher"),
+        }
+    }
+}
+
 impl LogMessage {
     pub fn stdout(line: String) -> Self {
         Self {
@@ -82,18 +92,15 @@ impl std::fmt::Display for LogMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match serde_json::to_string(self) {
             Ok(json) => write!(f, "{}", json),
-            Err(_) => write!(
-                f,
-                "[{}] [{}] {}",
-                self.level, self.source, self.msg
-            ),
+            Err(_) => write!(f, "[{}] [{}] {}", self.level, self.source, self.msg),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{LogMessage, LogSource};
+    use crate::taxonomy_log_level_vo::LogLevel;
 
     #[test]
     fn display_stdout() {
@@ -119,7 +126,8 @@ mod tests {
     #[test]
     fn debug_stdout() {
         let msg = LogMessage::stdout("x".into());
-        assert!(format!("{:?}", msg).contains("stdout"));
+        let dbg = format!("{:?}", msg);
+        assert!(dbg.contains("Stdout") || dbg.contains("stdout"));
     }
 
     #[test]

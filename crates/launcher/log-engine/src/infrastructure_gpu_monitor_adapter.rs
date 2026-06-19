@@ -75,19 +75,18 @@ impl GpuMonitorAdapter {
         };
         (adapter, metrics)
     }
-
-    /// Spawn the background polling thread.
-    pub fn start_polling(&self) {
-        let metrics = self.metrics.clone();
-        thread::spawn(move || {
-            poll_loop(&metrics);
-        });
-    }
 }
 
 impl GpuMonitorPort for GpuMonitorAdapter {
     fn get_metrics(&self) -> GpuMetrics {
         self.metrics.snapshot()
+    }
+
+    fn start_polling(&self) {
+        let metrics = self.metrics.clone();
+        thread::spawn(move || {
+            poll_loop(&metrics);
+        });
     }
 }
 
@@ -139,12 +138,18 @@ fn parse_vram_json(stdout: &[u8], metrics: &GpuMetricsAtomic) {
 
     // rocm-smi JSON format: {"card0": {"VRAM Total Memory": ..., "VRAM Total Used Memory": ...}}
     if let Some(card) = json.get("card0") {
-        if let Some(total) = card.get("VRAM Total Memory (B)").or_else(|| card.get("VRAM Total Memory")) {
+        if let Some(total) = card
+            .get("VRAM Total Memory (B)")
+            .or_else(|| card.get("VRAM Total Memory"))
+        {
             if let Some(val) = total.as_u64() {
                 metrics.vram_total.store(val, Ordering::Relaxed);
             }
         }
-        if let Some(used) = card.get("VRAM Total Used Memory (B)").or_else(|| card.get("VRAM Total Used Memory")) {
+        if let Some(used) = card
+            .get("VRAM Total Used Memory (B)")
+            .or_else(|| card.get("VRAM Total Used Memory"))
+        {
             if let Some(val) = used.as_u64() {
                 metrics.vram_used.store(val, Ordering::Relaxed);
                 let total = metrics.vram_total.load(Ordering::Relaxed);
@@ -171,23 +176,34 @@ fn parse_use_json(stdout: &[u8], metrics: &GpuMetricsAtomic) {
         }
 
         // Temperature
-        if let Some(temp) = card.get("Temperature (Sensor edge) (C)").or_else(|| card.get("Temperature (edge) (C)")) {
+        if let Some(temp) = card
+            .get("Temperature (Sensor edge) (C)")
+            .or_else(|| card.get("Temperature (edge) (C)"))
+        {
             if let Some(val) = temp.as_f64() {
                 metrics.temperature.store(val as u32, Ordering::Relaxed);
             }
         }
 
         // Clock speed
-        if let Some(clock) = card.get("GPU clocks (MHz)").or_else(|| card.get("Clock Speed (MHz)")) {
+        if let Some(clock) = card
+            .get("GPU clocks (MHz)")
+            .or_else(|| card.get("Clock Speed (MHz)"))
+        {
             if let Some(val) = clock.as_f64() {
                 metrics.clock_mhz.store(val as u32, Ordering::Relaxed);
             }
         }
 
         // Power
-        if let Some(power) = card.get("Average Graphics Package Power (W)").or_else(|| card.get("GPU Power (W)")) {
+        if let Some(power) = card
+            .get("Average Graphics Package Power (W)")
+            .or_else(|| card.get("GPU Power (W)"))
+        {
             if let Some(val) = power.as_f64() {
-                metrics.power_watts.store((val * 100.0) as u32, Ordering::Relaxed);
+                metrics
+                    .power_watts
+                    .store((val * 100.0) as u32, Ordering::Relaxed);
             }
         }
 

@@ -3,8 +3,8 @@
 use std::sync::atomic::Ordering;
 use tauri::State;
 
-use launcher_shared::{HealthState, LogBuffer, LogStats};
 use launcher_shared::contract_gpu_monitor_port::GpuMonitorPort;
+use launcher_shared::{HealthState, LogBuffer, LogStats};
 
 /// Return logs newer than `last_id`, plus the new max_id for polling.
 #[tauri::command]
