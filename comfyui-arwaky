@@ -22,23 +22,25 @@ show_menu() {
     echo -e ""
     echo -e " [1] ${GREEN}${BOLD}ComfyUI Backend Only${NC}"
     echo -e "     Run the ComfyUI backend server with AMD ROCm GPU acceleration."
-    echo -e " [2] ${GREEN}${BOLD}ComfyUI Launcher${NC}"
+    echo -e " [2] ${RED}${BOLD}Stop ComfyUI${NC}"
+    echo -e "     Stop desktop app + backend + free port 8188."
+    echo -e " [3] ${GREEN}${BOLD}ComfyUI Launcher${NC}"
     echo -e "     Open the Tauri desktop launcher application."
-    echo -e " [3] ${GREEN}${BOLD}ComfyUI Download Manager${NC}"
+    echo -e " [4] ${GREEN}${BOLD}ComfyUI Download Manager${NC}"
     echo -e "     Open the interactive TUI downloader to manage and download models."
-    echo -e " [4] ${GREEN}${BOLD}Build + Install Launcher Only${NC}"
+    echo -e " [5] ${GREEN}${BOLD}Build + Install Launcher Only${NC}"
     echo -e "     Build the desktop launcher (Tauri) and install to ~/.local/bin."
-    echo -e " [5] ${GREEN}${BOLD}Build + Install Downloader (CLI + TUI)${NC}"
+    echo -e " [6] ${GREEN}${BOLD}Build + Install Downloader (CLI + TUI)${NC}"
     echo -e "     Build the CLI + TUI model downloader and install to ~/.cargo/bin."
-    echo -e " [6] ${GREEN}${BOLD}Install Python Dependencies (Venv Setup)${NC}"
+    echo -e " [7] ${GREEN}${BOLD}Install Python Dependencies (Venv Setup)${NC}"
     echo -e "     Create Python 3.12 virtual environment and install requirements.txt."
-    echo -e " [7] ${GREEN}${BOLD}Upgrade ROCm Libraries${NC}"
+    echo -e " [8] ${GREEN}${BOLD}Upgrade ROCm Libraries${NC}"
     echo -e "     Verify and upgrade ROCm libraries for PyTorch."
-    echo -e " [8] ${GREEN}${BOLD}Run CI Checks${NC}"
+    echo -e " [9] ${GREEN}${BOLD}Run CI Checks${NC}"
     echo -e "     Run fmt, clippy, test, shellcheck, and audit check."
-    echo -e " [9] ${GREEN}${BOLD}Release Pipeline${NC}"
+    echo -e " [10] ${GREEN}${BOLD}Release Pipeline${NC}"
     echo -e "     CI → audit → bump → commit → push → tag → GitHub Release."
-    echo -e " [10] ${GREEN}${BOLD}Run Symlink Watcher Service${NC}"
+    echo -e " [11] ${GREEN}${BOLD}Run Symlink Watcher Service${NC}"
     echo -e "     Run the symlink monitor service to actively track file links."
     echo -e " [q] ${RED}Quit${NC}"
     echo -e "\n${CYAN}──────────────────────────────────────────────────────────${NC}"
@@ -46,7 +48,7 @@ show_menu() {
 
 while true; do
     show_menu
-    read -rp "Enter your choice (1-10 or q): " pilihan
+    read -rp "Enter your choice (1-11 or q): " pilihan
 
     case $pilihan in
         1)
@@ -56,53 +58,59 @@ while true; do
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
         2)
+            echo -e "\n${RED}Stopping ComfyUI...${NC}"
+            cd "$SCRIPT_DIR" || exit
+            bash "$SCRIPTS_FOLDER/stop_comfyui.sh"
+            read -n 1 -s -r -p "Press any key to return to menu..."
+            ;;
+        3)
             echo -e "\n${YELLOW}Opening ComfyUI Desktop Launcher...${NC}"
             cd "$SCRIPT_DIR" || exit
             if command -v comfyui-desktop &>/dev/null; then
                 comfyui-desktop
             else
-                echo -e "${RED}Launcher not installed. Build & install first (option 4).${NC}"
+                echo -e "${RED}Launcher not installed. Build & install first (option 5).${NC}"
             fi
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        3)
+        4)
             echo -e "\n${YELLOW}Opening Download Manager (TUI)...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/download_models.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        4)
+        5)
             echo -e "\n${YELLOW}Building + Installing Launcher...${NC}"
             cd "$SCRIPT_DIR" || exit
             RUST_MIN_STACK=16777216 bash "$SCRIPTS_FOLDER/build-launcher.sh" && bash "$SCRIPTS_FOLDER/install_local.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        5)
+        6)
             echo -e "\n${YELLOW}Building + Installing Downloader...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/build-downloader.sh" && bash "$SCRIPTS_FOLDER/install_local.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        6)
+        7)
             echo -e "\n${YELLOW}Installing Python Dependencies...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/install_deps.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        7)
+        8)
             echo -e "\n${YELLOW}Running ROCm Library Upgrade...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/upgrade_rocm.sh"
             read -n 1 -s -r -p "Press any key to return to menu..."
             ;;
-        8)
+        9)
             echo -e "\n${YELLOW}Running CI Checks...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/release.sh" --ci-only
             echo -e "\n${CYAN}Press any key to return to menu...${NC}"
             read -n 1 -s -r
             ;;
-        9)
+        10)
             echo -e "\n${YELLOW}Running release pipeline...${NC}"
             cd "$SCRIPT_DIR" || exit
             echo -e "  Auto-detecting version from Cargo.toml..."
@@ -110,7 +118,7 @@ while true; do
             echo -e "\n${CYAN}Press any key to return to menu...${NC}"
             read -n 1 -s -r
             ;;
-        10)
+        11)
             echo -e "\n${YELLOW}Running Symlink Watcher (press Ctrl+C to stop)...${NC}"
             cd "$SCRIPT_DIR" || exit
             bash "$SCRIPTS_FOLDER/watch-symlinks.sh"
