@@ -8,7 +8,9 @@ mod surface_log_command;
 pub use infrastructure_file_log_writer::FileLogWriter;
 pub use infrastructure_gpu_monitor_adapter::{GpuMetricsAtomic, GpuMonitorAdapter};
 pub use infrastructure_log_writer::LogEmitter;
-pub use surface_log_command::{get_gpu_metrics, get_health, get_log_stats, get_logs};
+pub use surface_log_command::{
+    get_gpu_metrics, get_health, get_log_stats, get_logs, open_log_viewer,
+};
 
 // ── Constants ──
 

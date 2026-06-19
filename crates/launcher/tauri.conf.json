@@ -7,7 +7,7 @@
     "frontendDist": "../../assets/ui"
   },
   "app": {
-    "withGlobalTauri": false,
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
@@ -28,11 +28,14 @@
           "identifier": "default",
           "description": "enables the default permissions",
           "windows": [
-            "main"
+            "main",
+            "log-viewer"
           ],
           "permissions": [
             "core:default",
-            "core:app:default"
+            "core:app:default",
+            "core:window:default",
+            "core:webview:default"
           ]
         }
       ]

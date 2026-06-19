@@ -1,7 +1,10 @@
 // PURPOSE: Tauri surface commands for log retrieval — expose log buffer, health, GPU metrics.
 
 use std::sync::atomic::Ordering;
+use tauri::Manager;
 use tauri::State;
+use tauri::WebviewUrl;
+use tauri::WebviewWindowBuilder;
 
 use launcher_shared::contract_gpu_monitor_port::GpuMonitorPort;
 use launcher_shared::{HealthState, LogBuffer, LogStats};
@@ -68,4 +71,28 @@ pub fn get_gpu_metrics(
     gpu_monitor: State<'_, Box<dyn GpuMonitorPort>>,
 ) -> launcher_shared::GpuMetrics {
     gpu_monitor.get_metrics()
+}
+
+/// Open a dedicated log viewer window.
+#[tauri::command]
+pub fn open_log_viewer(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("log-viewer") {
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    WebviewWindowBuilder::new(
+        &app,
+        "log-viewer",
+        WebviewUrl::App("log-viewer.html".into()),
+    )
+    .title("Backend Logs — ComfyUI Desktop")
+    .inner_size(900.0, 600.0)
+    .min_inner_size(600.0, 400.0)
+    .resizable(true)
+    .decorations(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
 }

@@ -112,6 +112,7 @@ pub fn configure_app(
             launcher_log_engine::get_log_stats,
             launcher_log_engine::get_health,
             launcher_log_engine::get_gpu_metrics,
+            launcher_log_engine::open_log_viewer,
             crate::check_backend_status,
             crate::start_backend_download,
             crate::cancel_backend_download,
