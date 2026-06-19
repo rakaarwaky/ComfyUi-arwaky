@@ -31,6 +31,6 @@ launcher-engine = { path = "launcher-engine" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.2", features = [] }
+tauri = { version = "2.11.2", features = ["devtools"] }
 tauri-plugin-log = "2"
 libc = "0.2"

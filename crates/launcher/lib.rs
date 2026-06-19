@@ -102,6 +102,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
+    // Enable devtools for debugging
+    if let Some(window) = app.get_webview_window("main") {
+        window.open_devtools();
+    }
+
     app.run(|_app_handle, _event| {
         // Surface has no direct cleanup — process-manager handles lifecycle
     });
