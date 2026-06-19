@@ -110,6 +110,9 @@ impl ProcessPort for ProcessSpawner {
             // else: no flag = dynamic VRAM (replaces old --normalvram)
         }
 
+        // Cache models in RAM for faster startup (28GB+ RAM recommended)
+        cmd.arg("--high-ram");
+
         // Persistent ROCm/Torch/Triton cache — kept outside the ComfyUI project
         // so it survives restarts, reinstall, and backend changes.
         let (cache_base, hip_cache, pycache) = get_comfyui_cache_env();

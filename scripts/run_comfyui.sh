@@ -158,5 +158,6 @@ exec "${COMFYUI_PYTHON}" "$ROOT_DIR/ComfyUI/main.py" \
   --user-directory "$HOME/SharedData/User" \
   --listen 127.0.0.1 \
   --port "$PORT" \
+  --high-ram \
   "${COMFYUI_VRAM_ARGS[@]}" \
   "${EXTRA_ARGS[@]}"
