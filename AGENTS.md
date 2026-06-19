@@ -202,6 +202,7 @@ The downloader workspace has its own `version = "2.0.0"` in `crates/Cargo.toml` 
 - **Channel comms**: Use `try_send` (non-blocking) on MPSC channels from reader threads. Never `send` — it can deadlock.
 - **Mutex poisoning**: Always handle with `.unwrap_or_else(|p| p.into_inner())` pattern rather than panicking.
 - **Logging**: 2000-entry ring buffer, 50-message batches at 100ms flush. Constants in `logging.rs`.
+- **ROCm/HIP logging**: `HIP_LOG_LEVEL=1`, `AMD_LOG_LEVEL=4`, `ROCR_DEBUG=0` — set in both Rust launcher and `run_comfyui.sh` for hang detection.
 - **Downloader AES architecture**:
   - `contract_*` files = traits only (Send + Sync for thread safety)
   - `capabilities_*` = pure logic implementing protocol traits
