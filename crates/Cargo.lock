@@ -2115,6 +2115,7 @@ name = "launcher-log-engine"
 version = "2.0.0"
 dependencies = [
  "launcher-shared",
+ "serde_json",
  "tauri",
 ]
 

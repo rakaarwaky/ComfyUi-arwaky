@@ -1,9 +1,11 @@
-// PURPOSE: Tauri surface commands for log retrieval — expose log buffer to frontend.
+// PURPOSE: Tauri surface commands for log retrieval — expose log buffer, health, GPU metrics.
 
 use std::sync::atomic::Ordering;
 use tauri::State;
 
-use launcher_shared::{LogBuffer, LogStats};
+use launcher_shared::{HealthState, LogBuffer, LogStats};
+use launcher_shared::contract_gpu_monitor_port::GpuMonitorPort;
+
 /// Return logs newer than `last_id`, plus the new max_id for polling.
 #[tauri::command]
 pub fn get_logs(
@@ -34,4 +36,36 @@ pub fn get_log_stats(stats: State<'_, LogStats>) -> (u64, u64) {
         stats.total_received.load(Ordering::Relaxed),
         stats.dropped.load(Ordering::Relaxed),
     )
+}
+
+/// Return full system health snapshot.
+#[tauri::command]
+pub fn get_health(
+    gpu_monitor: State<'_, Box<dyn GpuMonitorPort>>,
+    log_stats: State<'_, LogStats>,
+    start_time: State<'_, crate::StartTime>,
+) -> HealthState {
+    let gpu = gpu_monitor.get_metrics();
+    let (received, dropped) = (
+        log_stats.total_received.load(Ordering::Relaxed),
+        log_stats.dropped.load(Ordering::Relaxed),
+    );
+    let uptime = start_time.0.elapsed().as_secs();
+
+    HealthState {
+        backend_alive: false,
+        uptime_secs: uptime,
+        gpu,
+        logs_received: received,
+        logs_dropped: dropped,
+        backend_pid: None,
+    }
+}
+
+/// Return latest GPU metrics snapshot.
+#[tauri::command]
+pub fn get_gpu_metrics(
+    gpu_monitor: State<'_, Box<dyn GpuMonitorPort>>,
+) -> launcher_shared::GpuMetrics {
+    gpu_monitor.get_metrics()
 }

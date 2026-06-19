@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 launcher-shared = { path = "../shared" }
 tauri = { version = "2.11.2", features = [] }
+serde_json = "1.0"

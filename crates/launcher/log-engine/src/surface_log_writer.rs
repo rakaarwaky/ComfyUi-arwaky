@@ -3,17 +3,29 @@
 use std::collections::HashMap;
 use tauri::{Emitter, Manager};
 
-use launcher_shared::LogMessage;
-
-use launcher_shared::LogSender;
+use launcher_shared::{LogMessage, LogSender, LogLevel};
 
 /// Send a launcher info message to the log channel.
 pub fn log_info(app_handle: &tauri::AppHandle, message: &str) {
+    log_with_level(app_handle, LogLevel::Info, message);
+}
+
+/// Send a launcher warning message to the log channel.
+pub fn log_warn(app_handle: &tauri::AppHandle, message: &str) {
+    log_with_level(app_handle, LogLevel::Warn, message);
+}
+
+/// Send a launcher error message to the log channel.
+pub fn log_error(app_handle: &tauri::AppHandle, message: &str) {
+    log_with_level(app_handle, LogLevel::Error, message);
+}
+
+fn log_with_level(app_handle: &tauri::AppHandle, level: LogLevel, message: &str) {
     if let Some(sender) = app_handle.try_state::<LogSender>() {
         if let Ok(tx_guard) = sender.tx.lock() {
             if let Some(ref tx) = *tx_guard {
                 if tx
-                    .try_send(LogMessage::Launcher(message.to_string()))
+                    .try_send(LogMessage::launcher_with_level(level, message.to_string()))
                     .is_err()
                 {
                     eprintln!("[Launcher] {}", message);
