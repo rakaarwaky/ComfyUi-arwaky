@@ -5,13 +5,52 @@ use std::os::unix::process::CommandExt;
 use std::process::Child;
 use std::time::Duration;
 
+use std::path::PathBuf;
+
 use launcher_shared::contract_process_port::{ProcessPort, SpawnParams};
 use launcher_shared::{LogMessage, ProcessError};
+
+fn get_rocm_path() -> std::ffi::OsString {
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths = std::env::split_paths(&path).collect::<Vec<_>>();
+    paths.insert(0, std::path::PathBuf::from("/opt/rocm/bin"));
+    paths.insert(0, std::path::PathBuf::from("/opt/rocm-7.2.4/bin"));
+    std::env::join_paths(paths).unwrap_or(path)
+}
+
+fn get_comfyui_cache_env() -> (PathBuf, PathBuf, PathBuf) {
+    let home = std::env::var("HOME").ok().map(PathBuf::from);
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let base = match home {
+        Some(ref h) => h.join(".cache").join("comfyui-desktop"),
+        None => cwd.join(".cache").join("comfyui-desktop"),
+    };
+
+    let _ = std::fs::create_dir_all(&base);
+    let _ = std::fs::create_dir_all(base.join("hip"));
+    let _ = std::fs::create_dir_all(base.join("comgr"));
+    let _ = std::fs::create_dir_all(base.join("miopen"));
+    let _ = std::fs::create_dir_all(base.join("triton"));
+
+    let pycache = match home {
+        Some(ref h) => h.join(".cache").join("comfyui-desktop").join("pycache"),
+        None => base.join("pycache"),
+    };
+    let _ = std::fs::create_dir_all(&pycache);
+
+    (
+        base.clone(),
+        base.join("hip"),
+        pycache,
+    )
+}
 
 pub struct ProcessSpawner;
 
 impl ProcessPort for ProcessSpawner {
     fn spawn(&self, params: SpawnParams) -> Result<(), ProcessError> {
+        let new_path = get_rocm_path();
+
         let mut cmd = std::process::Command::new(params.python_path);
         cmd.arg("main.py")
             .arg("--extra-model-paths-config")
@@ -27,10 +66,64 @@ impl ProcessPort for ProcessSpawner {
             cmd.arg("--user-directory").arg(u_dir);
         }
 
+        // Detect VRAM size of the selected GPU using rocm-smi
+        let gpu_str = params.gpu_index.as_str();
+        let mut vram_bytes = None;
+        let output = std::process::Command::new("rocm-smi")
+            .env("PATH", &new_path)
+            .arg("--showmeminfo")
+            .arg("vram")
+            .output();
+
+        if let Ok(out) = output {
+            if out.status.success() {
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                let target_gpu_header = format!("GPU[{}]", gpu_str);
+                let mut found_gpu = false;
+                for line in stdout.lines() {
+                    if line.contains(&target_gpu_header) {
+                        found_gpu = true;
+                    }
+                    if found_gpu && line.contains("VRAM Total Memory") {
+                        if let Some(col) = line.rfind(':') {
+                            if let Ok(vram) = line[col + 1..].trim().parse::<u64>() {
+                                vram_bytes = Some(vram);
+                                break;
+                            }
+                        }
+                    }
+                    if found_gpu && line.contains("GPU[") && !line.contains(&target_gpu_header) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Add appropriate VRAM flags
+        if let Some(bytes) = vram_bytes {
+            if bytes >= 12_000_000_000 {
+                cmd.arg("--highvram");
+            } else if bytes >= 6_000_000_000 {
+                cmd.arg("--normalvram");
+            } else {
+                cmd.arg("--lowvram");
+            }
+        } else {
+            cmd.arg("--normalvram"); // Default fallback if detection fails
+        }
+
+        // Persistent ROCm/Torch/Triton cache — kept outside the ComfyUI project
+        // so it survives restarts, reinstall, and backend changes.
+        let (cache_base, hip_cache, pycache) = get_comfyui_cache_env();
+
         cmd.current_dir(params.comfyui_dir)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
+            .env("PATH", &new_path)
             .env("HIP_VISIBLE_DEVICES", params.gpu_index.as_str())
+            .env("XDG_CACHE_HOME", cache_base)
+            .env("HIP_CACHE_DIR", hip_cache)
+            .env("PYTHONPYCACHEPREFIX", pycache)
             .process_group(0);
 
         if let Some(hsa_ver) = params.hsa_override {

@@ -110,16 +110,41 @@ else
 fi
 
 # ── Activate venv ──────────────────────────────────────────────────────────────
-if [ -f "$ROOT_DIR/venv/bin/activate" ]; then
-  # shellcheck source=/dev/null
-  source "$ROOT_DIR/venv/bin/activate"
-else
-  echo "Warning: venv not found at $ROOT_DIR/venv — skipping activation"
+COMFYUI_PYTHON=""
+if [ -f "$ROOT_DIR/venv/bin/python3.12" ]; then
+  COMFYUI_PYTHON="$ROOT_DIR/venv/bin/python3.12"
+elif [ -f "$ROOT_DIR/venv/bin/python" ]; then
+  COMFYUI_PYTHON="$ROOT_DIR/venv/bin/python"
+elif [[ -n "${VIRTUAL_ENV:-}" && -f "${VIRTUAL_ENV}/bin/python3.12" ]]; then
+  COMFYUI_PYTHON="${VIRTUAL_ENV}/bin/python3.12"
+elif [[ -n "${VIRTUAL_ENV:-}" && -f "${VIRTUAL_ENV}/bin/python" ]]; then
+  COMFYUI_PYTHON="${VIRTUAL_ENV}/bin/python"
 fi
+
+if [[ -z "$COMFYUI_PYTHON" ]]; then
+  echo "Warning: ComfyUI venv not found at $ROOT_DIR/venv — falling back to 'python'" >&2
+  COMFYUI_PYTHON="python"
+fi
+
+if [[ "$COMFYUI_PYTHON" == "$ROOT_DIR/venv/bin/python"* || "$COMFYUI_PYTHON" == "${VIRTUAL_ENV:-}/bin/python"* ]]; then
+  echo "Installing common missing dependencies into ComfyUI venv..." >&2
+  "$COMFYUI_PYTHON" -m pip install --disable-pip-version-check --no-input --quiet \
+    scikit-image opencv-python-headless || true
+fi
+
+# Use a stable per-user cache dir so ROCm/Torch/Triton caches survive project
+# moves, reinstall, and ComfyUI backend changes.
+COMFYUI_XDG_CACHE="${HOME}/.cache/comfyui-desktop"
+COMFYUI_HIP_CACHE="${COMFYUI_XDG_CACHE}/hip"
+mkdir -p "$COMFYUI_XDG_CACHE" "$COMFYUI_HIP_CACHE"
+export XDG_CACHE_HOME="$COMFYUI_XDG_CACHE"
+export HIP_CACHE_DIR="$COMFYUI_HIP_CACHE"
+export PYTHONPYCACHEPREFIX="${ROOT_DIR}/.pycache"
 
 # ── Launch ─────────────────────────────────────────────────────────────────────
 echo "Starting ComfyUI Server on port $PORT..."
-exec python "$ROOT_DIR/ComfyUI/main.py" \
+echo "ComfyUI python: ${COMFYUI_PYTHON}"
+exec "${COMFYUI_PYTHON}" "$ROOT_DIR/ComfyUI/main.py" \
   --extra-model-paths-config "$ROOT_DIR/extra_model_paths.yaml" \
   --output-directory "$HOME/SharedData/Output" \
   --input-directory "$HOME/SharedData/Input" \

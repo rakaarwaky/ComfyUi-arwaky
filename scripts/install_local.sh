@@ -32,9 +32,22 @@ mkdir -p "$DATA_DIR/applications"
 mkdir -p "$DATA_DIR/icons/hicolor"
 
 echo "[2/4] Installing binary..."
-cp "$BINARY_FILE" "$INSTALL_DIR/comfyui-desktop"
-chmod +x "$INSTALL_DIR/comfyui-desktop"
-echo "  ✅ Binary installed to: $INSTALL_DIR/comfyui-desktop"
+if ldd "$BINARY_FILE" >/dev/null 2>&1; then
+  :
+fi
+
+INSTALLED_BINARY="$INSTALL_DIR/comfyui-desktop"
+if [ -e "$INSTALLED_BINARY" ]; then
+  if [ -e "/proc/$(pgrep -x -f '(^|/)(comfyui-desktop|comfyui-desktop$)' | tr '\n' ' ')" ] 2>/dev/null; then
+    echo "  ❌ Installed launcher is currently running: $INSTALLED_BINARY"
+    echo "     Close 'ComfyUI Desktop' before reinstalling, or stop it with:"
+    echo "     pkill -x comfyui-desktop"
+    exit 1
+  fi
+fi
+cp "$BINARY_FILE" "$INSTALLED_BINARY"
+chmod +x "$INSTALLED_BINARY"
+echo "  ✅ Binary installed to: $INSTALLED_BINARY"
 
 if [ -f "$DOWNLOADER_CLI" ]; then
     cp "$DOWNLOADER_CLI" "$INSTALL_DIR/comfyui-downloader-cli"

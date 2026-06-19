@@ -5,9 +5,18 @@ use launcher_shared::{GpuError, GpuIndex, HsaOverride};
 
 pub struct GpuDetector;
 
+fn get_rocm_path() -> std::ffi::OsString {
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths = std::env::split_paths(&path).collect::<Vec<_>>();
+    paths.insert(0, std::path::PathBuf::from("/opt/rocm/bin"));
+    paths.insert(0, std::path::PathBuf::from("/opt/rocm-7.2.4/bin"));
+    std::env::join_paths(paths).unwrap_or(path)
+}
+
 impl GpuDetectionProtocol for GpuDetector {
     fn detect_dgpu_index(&self) -> Result<GpuIndex, GpuError> {
         let output = std::process::Command::new("rocm-smi")
+            .env("PATH", get_rocm_path())
             .arg("--showmeminfo").arg("vram").output();
         match output {
             Ok(out) if out.status.success() => {
@@ -64,6 +73,7 @@ impl GpuDetectionProtocol for GpuDetector {
 
         // Fallback: try rocm-smi --showhw
         let smi_output = std::process::Command::new("rocm-smi")
+            .env("PATH", get_rocm_path())
             .arg("--showhw").output();
         if let Ok(out) = smi_output {
             if out.status.success() {
