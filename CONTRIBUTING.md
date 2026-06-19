@@ -28,7 +28,7 @@ Thank you for your interest in contributing to ComfyUI Desktop! This document pr
 
 To compile and build ComfyUI Desktop, ensure you have the following installed on your host system:
 
-* **Rust Toolchain**: version `1.77+` (via [rustup](https://rustup.rs/))
+* **Rust Toolchain**: version `1.85+` (via [rustup](https://rustup.rs/))
 * **Node.js Runtime**: version `18+` (used for Tauri CLI commands)
 * **Python Runtime**: version `3.12`
 * **System Libraries** (Fedora):
@@ -71,9 +71,9 @@ To run the application shell with active hot reloading of the backend and splash
 npx @tauri-apps/cli dev
 ```
 
-To compile production AppImages and RPM files to the `dist/` folder:
+To compile production binaries to the `dist/` folder:
 ```bash
-bash scripts/build.sh
+bash scripts/build-launcher.sh
 ```
 
 To build the model downloader only (CLI + TUI):
@@ -210,7 +210,7 @@ bash scripts/ci-local.sh --fix
 bash scripts/ci-local.sh --fast
 ```
 
-For more info about script arguments, check the [Script Reference](file:///home/raka/App/ComfyUi-arwaky/docs/scripts.md).
+For more info about script arguments, check the [Script Reference](docs/scripts.md).
 
 ---
 
@@ -229,7 +229,6 @@ We manage project versions systematically using custom scripts. If you are prepa
 2. The script updates:
    - App version in `crates/launcher/Cargo.toml`
    - Version mapping in `crates/launcher/tauri.conf.json`
-   - Downloader version constraints in `crates/launcher/src/downloader.rs`
 3. Optional: Pass `--tag` to automatically create a git tag and commit the updates.
 
 The downloader workspace version (`crates/Cargo.toml` → `workspace.package.version`) is managed separately.

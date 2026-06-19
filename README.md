@@ -130,7 +130,7 @@ bash scripts/install_local.sh
 
 4. **Compile the Production Bundles**:
    ```bash
-   bash scripts/build.sh
+   bash scripts/build-launcher.sh
    ```
 
 5. **Build the Model Downloader (CLI + TUI)**:
@@ -142,6 +142,7 @@ bash scripts/install_local.sh
 6. **Install all binaries locally**:
    ```bash
    bash scripts/install_local.sh
+   # Installs to ~/.cargo/bin/comfyui-desktop
    # Installs to ~/.cargo/bin/comfyui-downloader-cli
    # Installs to ~/.cargo/bin/comfyui-downloader-tui
    ```
@@ -200,7 +201,7 @@ sequenceDiagram
     Tauri->>Tauri: Join background threads & Terminate
 ```
 
-For a detailed technical breakdown, refer to the [Architecture Guide](file:///home/raka/App/ComfyUi-arwaky/docs/architecture.md).
+For a detailed technical breakdown, refer to the [Architecture Guide](docs/architecture.md).
 
 ---
 
@@ -243,11 +244,11 @@ comfyui:
 
 Explore the following deep-dive guides for more configuration, maintenance, and architecture topics:
 
-* 🧩 [Architecture Design & Pipeline](file:///home/raka/App/ComfyUi-arwaky/docs/architecture.md) – In-depth overview of logging, IPC batching, port listening, and safe shutdown commands.
-* 🚀 [AMD ROCm & GPU Setup Guide](file:///home/raka/App/ComfyUi-arwaky/docs/gpu_guide.md) – Step-by-step procedures for installing ROCm, checking hardware compliance, and understanding GPU detection.
-* 🛠️ [Script Utilities Reference](file:///home/raka/App/ComfyUi-arwaky/docs/scripts.md) – Detailed guide on version bumping, local packaging, dependency upgrading, and the local validation harness.
-* 🩺 [Troubleshooting Handbook](file:///home/raka/App/ComfyUi-arwaky/docs/troubleshooting.md) – Solutions for blank rendering panels, PyTorch ROCm initialization issues, zombie processes, and memory management.
-* 👥 [Contributing Guidelines](file:///home/raka/App/ComfyUi-arwaky/CONTRIBUTING.md) – Detailed instructions for setting up the dev environment, coding standards, and local tests.
+* 🧩 [Architecture Design & Pipeline](docs/architecture.md) – In-depth overview of logging, IPC batching, port listening, and safe shutdown commands.
+* 🚀 [AMD ROCm & GPU Setup Guide](docs/gpu_guide.md) – Step-by-step procedures for installing ROCm, checking hardware compliance, and understanding GPU detection.
+* 🛠️ [Script Utilities Reference](docs/scripts.md) – Detailed guide on version bumping, local packaging, dependency upgrading, and the local validation harness.
+* 🩺 [Troubleshooting Handbook](docs/troubleshooting.md) – Solutions for blank rendering panels, PyTorch ROCm initialization issues, zombie processes, and memory management.
+* 👥 [Contributing Guidelines](CONTRIBUTING.md) – Detailed instructions for setting up the dev environment, coding standards, and local tests.
 
 ---
 

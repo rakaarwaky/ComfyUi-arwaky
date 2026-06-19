@@ -98,11 +98,12 @@ Run a smoke test in the project's virtual environment to check PyTorch's hardwar
 source venv/bin/activate
 python -c "import torch; print(torch.cuda.is_available())"
 ```
-If this returns `False`, PyTorch is using a CPU-only package. Re-install the correct ROCm PyTorch wheel:
+If this returns `False`, PyTorch is using a CPU-only package. Re-install the correct ROCm PyTorch wheel from AMD's repository:
 ```bash
-pip uninstall torch torchvision torchaudio
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm7.2
+pip uninstall torch torchvision torchaudio -y
+pip install -r requirements.txt
 ```
+This installs the correct ROCm 7.2.4 wheels from `repo.radeon.com` (listed in `requirements.txt`). Do not use PyPI torch — it won't have ROCm support.
 
 ---
 

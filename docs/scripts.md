@@ -24,10 +24,11 @@ This document provides a comprehensive reference for the shell scripts located i
 | [`scripts/upgrade_rocm.sh`](#upgrade_rocmsh-rocm-installer) | Upgrades host ROCm drivers to 7.2.4 from AMD repositories. | Yes |
 | [`scripts/ci-local.sh`](#ci-localsh-local-ci-runner) | Local validation harness (format, checks, clippy, unit tests, shellcheck). | No |
 | [`scripts/bump-version.sh`](#bump-versionsh-version-manager) | Bumps the application and backend version strings across the codebase. | No |
-| [`scripts/install_local.sh`](#install_localsh-rootless-rpm-installer) | Extracts and installs RPM files locally into the user's `~/.local/` directory. | No |
-| [`scripts/build.sh`](#buildsh-production-packager) | Bundles production release binaries (AppImage and RPM packages). | No |
+| [`scripts/install_local.sh`](#install_localsh-rootless-installer) | Installs binaries to ~/.cargo/bin/ and desktop entries. | No |
+| [`scripts/build-launcher.sh`](#build-launchersh-production-packager) | Compiles the Tauri launcher binary. | No |
+| [`scripts/build-downloader.sh`](#build-downloadersh-downloader-builder) | Builds CLI + TUI downloader binaries. | No |
 | [`scripts/run_comfyui.sh`](#run_comfyuish-standalone-runner) | Executes the ComfyUI Python backend standalone for isolated debugging. | No |
-| [`scripts/download_models.sh`](#download_modelssh-model-downloader) | Automates fetching recommended checkpoints and ControlNet weights. | No |
+| [`scripts/download_models.sh`](#download_modelssh-model-downloader) | Launches the TUI model downloader (build + run). | No |
 
 ---
 
@@ -97,7 +98,7 @@ Bumps the application version across the backend manifests, Tauri configurations
 
 ---
 
-### `install_local.sh` (Rootless RPM Installer)
+### `install_local.sh` (Rootless Installer)
 
 Enables users to install the application locally without system-wide administrative privileges (`sudo`).
 
@@ -106,26 +107,33 @@ Enables users to install the application locally without system-wide administrat
   bash scripts/install_local.sh
   ```
 * **How It Works**:
-  1. Searches the `dist/` folder or prompt paths for a compiled `.rpm` package matching `comfyui-desktop-*.rpm`.
-  2. Creates a temporary extraction folder and extracts the contents using standard RPM commands (`rpm2cpio` and `cpio`).
-  3. Moves binary executables into the user's home space path `~/.local/bin/`.
-  4. Copies application resource assets (desktop configurations, application icons) into `~/.local/share/`.
-  5. Updates local icon paths and updates desktop database registries so ComfyUI Desktop shows up in the user's desktop application menu.
+  1. Copies compiled binaries from `dist/` to `~/.cargo/bin/`.
+  2. Installs desktop entries and icons to `~/.local/share/`.
+  3. Updates desktop database so ComfyUI Desktop appears in the application menu.
 
 ---
 
-### `build.sh` (Production Packager)
+### `build-launcher.sh` (Production Packager)
 
-Compiles the production-ready distribution packages.
+Compiles the Tauri launcher binary.
 
 * **Execution**:
   ```bash
-  bash scripts/build.sh
+  bash scripts/build-launcher.sh
   ```
-* **Outputs Created**:
-  - **AppImage**: A single portable application executable.
-  - **RPM**: An installation package for Fedora.
-  All compiled artifacts are stored in the root `dist/` directory.
+* **Output**: `dist/comfyui-desktop`
+
+---
+
+### `build-downloader.sh` (Downloader Builder)
+
+Builds the CLI and TUI model downloader binaries.
+
+* **Execution**:
+  ```bash
+  bash scripts/build-downloader.sh
+  ```
+* **Outputs**: `dist/comfyui-downloader-cli`, `dist/comfyui-downloader-tui`
 
 ---
 
