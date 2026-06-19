@@ -160,6 +160,17 @@ if [ -f "$MANAGER_CONFIG" ]; then
   sed -i 's/^network_mode = .*/network_mode = offline/' "$MANAGER_CONFIG"
 fi
 
+# ── Use forked ComfyUI-Manager ────────────────────────────────────────────────
+CUSTOM_NODES_DIR="$ROOT_DIR/ComfyUI/custom_nodes"
+FORKED_MANAGER="$ROOT_DIR/ComfyUI-Manager"
+if [ -d "$FORKED_MANAGER" ]; then
+  if [ -d "$CUSTOM_NODES_DIR/ComfyUI-Manager" ]; then
+    rm -rf "$CUSTOM_NODES_DIR/ComfyUI-Manager"
+  fi
+  cp -r "$FORKED_MANAGER" "$CUSTOM_NODES_DIR/ComfyUI-Manager"
+  echo "Using forked ComfyUI-Manager from $FORKED_MANAGER"
+fi
+
 # ── Launch ─────────────────────────────────────────────────────────────────────
 echo "Starting ComfyUI Server on port $PORT..."
 echo "ComfyUI python: ${COMFYUI_PYTHON}"

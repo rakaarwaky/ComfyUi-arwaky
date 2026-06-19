@@ -5,3 +5,6 @@
 [submodule "ComfyUI_frontend"]
 	path = ComfyUI_frontend
 	url = https://github.com/rakaarwaky/ComfyUI_frontend.git
+[submodule "ComfyUI-Manager"]
+	path = ComfyUI-Manager
+	url = https://github.com/rakaarwaky/ComfyUI-Manager.git
