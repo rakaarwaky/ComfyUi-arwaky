@@ -141,6 +141,14 @@ export XDG_CACHE_HOME="$COMFYUI_XDG_CACHE"
 export HIP_CACHE_DIR="$COMFYUI_HIP_CACHE"
 export PYTHONPYCACHEPREFIX="${ROOT_DIR}/.pycache"
 
+# ── ROCm stability fixes ──────────────────────────────────────────────────────
+export PYTORCH_HIP_ALLOC_CONF="expandable_segments:1"
+export AMD_SERIALIZE_KERNEL=3
+export HIP_LAUNCH_QUEUE_DUPLICATE_KERNEL_ATTENUATION=1
+export TORCH_HIP_DISABLE_TRITON_MMA=1
+export HIP_DISABLE_RDC=1
+export HIPCC_VERBOSE=0
+
 # ── Launch ─────────────────────────────────────────────────────────────────────
 echo "Starting ComfyUI Server on port $PORT..."
 echo "ComfyUI python: ${COMFYUI_PYTHON}"
