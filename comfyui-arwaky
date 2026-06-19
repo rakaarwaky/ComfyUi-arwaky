@@ -67,7 +67,9 @@ while true; do
             echo -e "\n${YELLOW}Opening ComfyUI Desktop Launcher...${NC}"
             cd "$SCRIPT_DIR" || exit
             if command -v comfyui-desktop &>/dev/null; then
-                comfyui-desktop
+                comfyui-desktop &>/dev/null &
+                disown
+                echo -e "${GREEN}ComfyUI Desktop launched in background.${NC}"
             else
                 echo -e "${RED}Launcher not installed. Build & install first (option 5).${NC}"
             fi
