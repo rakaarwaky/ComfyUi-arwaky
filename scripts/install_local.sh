@@ -39,7 +39,7 @@ fi
 
 INSTALLED_BINARY="$INSTALL_DIR/comfyui-desktop"
 if [ -e "$INSTALLED_BINARY" ]; then
-  if [ -e "/proc/$(pgrep -x -f '(^|/)(comfyui-desktop|comfyui-desktop$)' | tr '\n' ' ')" ] 2>/dev/null; then
+  if pgrep -x -f 'comfyui-desktop' >/dev/null 2>&1; then
     echo "  ❌ Installed launcher is currently running: $INSTALLED_BINARY"
     echo "     Close 'ComfyUI Desktop' before reinstalling, or stop it with:"
     echo "     pkill -x comfyui-desktop"
