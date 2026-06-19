@@ -268,3 +268,15 @@ if (window.__TAURI__) {
 
 // Initial check
 checkAndStart();
+
+// Open log viewer button
+const btnOpenLogViewer = document.getElementById("btn-open-log-viewer");
+if (btnOpenLogViewer) {
+  btnOpenLogViewer.addEventListener("click", async () => {
+    try {
+      await window.__TAURI__.core.invoke("open_log_viewer");
+    } catch (err) {
+      console.error("Failed to open log viewer:", err);
+    }
+  });
+}

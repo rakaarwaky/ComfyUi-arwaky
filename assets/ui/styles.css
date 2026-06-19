@@ -639,3 +639,38 @@ body {
     background: rgba(139, 92, 246, 0.25);
     border-color: rgba(139, 92, 246, 0.5);
 }
+
+.btn-open-log-viewer {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    -webkit-app-region: no-drag;
+}
+
+.btn-open-log-viewer svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-open-log-viewer:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-open-log-viewer:active {
+    transform: scale(0.95);
+}

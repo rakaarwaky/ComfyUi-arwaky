@@ -150,7 +150,7 @@ pub fn configure_app(
                     )) {
                         Ok(msg) => {
                             let formatted = msg.to_string();
-                            let is_stderr = msg.source == LogSource::Stderr;
+                            let _is_stderr = msg.source == LogSource::Stderr;
 
                             // Always write to file (even after redirect)
                             file_writer_ref.write_log(&formatted);
