@@ -21,7 +21,8 @@ if [ -f "$BINARY_FILE" ]; then
 else
     echo "❌ Error: Compiled binary not found in $ROOT_DIR/dist/"
     echo "Please run the build script first:"
-    echo "  bash scripts/build.sh"
+    echo "  bash scripts/build-launcher.sh   (for desktop app)"
+    echo "  bash scripts/build-downloader.sh (for model downloader)"
     exit 1
 fi
 
